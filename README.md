@@ -1,9 +1,10 @@
 # email2telegram (MVP)
 
-Simple bridge that polls a **Yandex Mail** inbox over IMAP and forwards new emails to a Telegram chat. (Other IMAP servers work if you set `IMAP_HOST` accordingly.)
+Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new messages, and forward them to a Telegram chat. (Other IMAP servers work if you set `IMAP_HOST` accordingly.)
 
 ## Features (MVP)
 
+- Connects to a **Yandex** mailbox via IMAP (`imap.yandex.com` / `imap.yandex.ru`).
 - IMAP polling every N seconds.
 - Forwards all new emails (no filters).
 - Sends `From`, `Subject`, `Date`, and body snippet to Telegram.
