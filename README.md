@@ -5,10 +5,26 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
 ## Features (MVP)
 
 - Connects to a **Yandex** mailbox via IMAP (`imap.yandex.com` / `imap.yandex.ru`).
+- **Single pipeline:** fetch new messages → optional save as `.eml` → send **full plain-text body** to Telegram (split into several chat messages if over the Telegram limit) → mark **read** on the server → update `last_seen_uid`.
 - IMAP polling every N seconds.
-- Forwards all new emails (no filters).
-- Sends `From`, `Subject`, `Date`, and body snippet to Telegram.
-- Stores `last_seen_uid` in local state file to avoid duplicates after restart.
+- No filters (all new mail in the chosen folder).
+- Telegram text formatting lives in `src/message_format.py` (easy to change later, e.g. Markdown).
+- **Allowlist:** `TELEGRAM_ALLOWED_CHAT_IDS` — почта уходит только в `TELEGRAM_CHAT_ID`, если он входит в список; команда `/start` обрабатывается только для чатов из списка (остальные пользователи не получают ответов).
+- Stores `last_seen_uid` in a state file so restarts do not resend old mail.
+
+## Docker (VPS)
+
+Short version:
+
+```bash
+cp .env.example .env   # fill and chmod 600 .env
+docker compose up -d --build
+docker compose logs -f
+```
+
+Full checklist (firewall, systemd, backups, **Docker Hub**): see **[DEPLOY.md](DEPLOY.md)**.
+
+Compose sets `STATE_FILE=/data/.state.json` and optional `TZ`. For `.eml` on disk add `EXPORT_MAIL_DIR=/data/mail_export` to `.env`. Logs from the container are rotated (10 MB × 3 files). The named volume `email2telegram_data` keeps state across restarts.
 
 ## Requirements
 
@@ -32,7 +48,7 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
    cp .env.example .env
    ```
 
-3. Copy `.env.example` to `.env` and set **`IMAP_USER`** / **`IMAP_PASS`** (and Telegram vars when you run the full bridge).
+3. Copy `.env.example` to `.env` and set **`IMAP_USER`** / **`IMAP_PASS`**, **`TELEGRAM_BOT_TOKEN`**, **`TELEGRAM_CHAT_ID`**, and **`TELEGRAM_ALLOWED_CHAT_IDS`** (в личке обычно тот же числовой id, что и `TELEGRAM_CHAT_ID`; несколько id через запятую).
 
 ### Yandex Mail (IMAP)
 
@@ -81,11 +97,14 @@ The server rejected `IMAP_USER` / `IMAP_PASS`. For Yandex, check:
 - `IMAP_MAILBOX` (default `INBOX`)
 - `POLL_INTERVAL_SECONDS` (default `45`)
 - `TELEGRAM_BOT_TOKEN` (required)
-- `TELEGRAM_CHAT_ID` (required)
+- `TELEGRAM_ALLOWED_CHAT_IDS` (required) — comma-separated chat IDs allowed to receive mail and `/start`; must include `TELEGRAM_CHAT_ID`.
+- `TELEGRAM_CHAT_ID` (required) — destination chat for forwarded mail (must appear in the allowlist).
+- `EXPORT_MAIL_DIR` (optional) — if set, each delivered message is also written as `{uid}.eml` under this directory.
+- `STATE_FILE` (optional, default `.state.json`) — path to the UID cursor file; use `/data/.state.json` in Docker.
 
 ## Manual verification checklist
 
 1. Send a new test email to the configured inbox.
-2. Check Telegram: one message appears with `From/Subject/Date` and snippet.
+2. Check Telegram: message(s) with full headers and body (long bodies may arrive as several messages, numbered `1/n`).
 3. Restart the service and verify previously forwarded email is not resent.
 4. Send UTF-8 subject/body email and verify text is decoded correctly.

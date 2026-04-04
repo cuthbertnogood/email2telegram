@@ -1,0 +1,23 @@
+# Local: build from this repo. For Docker Hub on VPS use docker-compose.hub.yml (see DEPLOY.md).
+
+services:
+  email2telegram:
+    build: .
+    container_name: email2telegram
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      STATE_FILE: /data/.state.json
+      TZ: ${TZ:-UTC}
+    volumes:
+      - email2telegram_data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+
+volumes:
+  email2telegram_data:

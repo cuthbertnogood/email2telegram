@@ -1,3 +1,8 @@
 .env
 .venv/
 logs/
+mail_export/
+.verify_state.json
+.state.json
+**/__pycache__/
+*.pyc

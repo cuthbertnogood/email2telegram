@@ -1,0 +1,27 @@
+# Run on the VPS: pull image from Docker Hub (no build, no full repo clone needed).
+#   export DOCKER_IMAGE=yourdockerhub/email2telegram:latest   # or set in .env
+#   docker compose -f docker-compose.hub.yml pull
+#   docker compose -f docker-compose.hub.yml up -d
+
+services:
+  email2telegram:
+    image: ${DOCKER_IMAGE}
+    pull_policy: always
+    container_name: email2telegram
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      STATE_FILE: /data/.state.json
+      TZ: ${TZ:-UTC}
+    volumes:
+      - email2telegram_data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+
+volumes:
+  email2telegram_data:

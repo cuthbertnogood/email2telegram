@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
-from typing import Optional
 
 from dotenv import load_dotenv
+from telegram.ext import Application, CommandHandler, ContextTypes, filters
 
+from allowlist import parse_allowed_chat_ids
 from imap_client import ImapClient
-from parser import parse_email
+from pipeline import load_export_dir_from_env, run_delivery_cycle
 from state import StateStore
-from telegram_client import build_message, send_message
 
 
 def _required_env(name: str) -> str:
@@ -20,25 +19,31 @@ def _required_env(name: str) -> str:
     return value
 
 
-async def run_once(client: ImapClient, state: StateStore, bot_token: str, chat_id: str) -> Optional[int]:
-    last_seen = state.get_last_seen_uid()
-    messages = client.fetch_new_messages(last_seen_uid=last_seen)
-    if not messages:
-        return last_seen
-
-    newest_uid = last_seen
-    for uid, raw in messages:
-        parsed = parse_email(raw)
-        text = build_message(parsed)
-        await send_message(bot_token=bot_token, chat_id=chat_id, text=text)
-        newest_uid = uid if newest_uid is None else max(newest_uid, uid)
-
-    if newest_uid is not None:
-        state.set_last_seen_uid(newest_uid)
-    return newest_uid
+def _state_path() -> str:
+    return os.getenv("STATE_FILE", ".state.json")
 
 
-async def main() -> None:
+async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
+    bd = context.application.bot_data
+    try:
+        await run_delivery_cycle(
+            bd["imap_client"],
+            bd["state"],
+            bot_token=bd["bot_token"],
+            chat_id=bd["chat_id"],
+            export_dir=bd["export_dir"],
+            allowed_chat_ids=bd["allowed_chat_ids"],
+        )
+    except Exception:
+        logging.exception("IMAP delivery cycle failed")
+
+
+async def _cmd_start(update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message:
+        await update.message.reply_text("email2telegram: почта доставляется в этот чат.")
+
+
+def main() -> None:
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -47,10 +52,18 @@ async def main() -> None:
     imap_user = _required_env("IMAP_USER")
     imap_pass = _required_env("IMAP_PASS")
     imap_mailbox = os.getenv("IMAP_MAILBOX", "INBOX")
-    poll_interval = int(os.getenv("POLL_INTERVAL_SECONDS", "45"))
+    poll_interval = float(os.getenv("POLL_INTERVAL_SECONDS", "45"))
 
     bot_token = _required_env("TELEGRAM_BOT_TOKEN")
     chat_id = _required_env("TELEGRAM_CHAT_ID")
+    allowed = parse_allowed_chat_ids(_required_env("TELEGRAM_ALLOWED_CHAT_IDS"))
+
+    chat_id_int = int(chat_id)
+    if chat_id_int not in allowed:
+        raise RuntimeError("TELEGRAM_CHAT_ID must be included in TELEGRAM_ALLOWED_CHAT_IDS")
+
+    export_dir = load_export_dir_from_env()
+    state_path = _state_path()
 
     imap_client = ImapClient(
         host=imap_host,
@@ -59,16 +72,39 @@ async def main() -> None:
         password=imap_pass,
         mailbox=imap_mailbox,
     )
-    state = StateStore()
+    state = StateStore(path=state_path)
 
-    logging.info("email2telegram started. Poll interval: %ss", poll_interval)
-    while True:
-        try:
-            await run_once(imap_client, state, bot_token, chat_id)
-        except Exception as exc:
-            logging.exception("polling cycle failed: %s", exc)
-        await asyncio.sleep(poll_interval)
+    application = Application.builder().token(bot_token).build()
+
+    application.bot_data.update(
+        {
+            "imap_client": imap_client,
+            "state": state,
+            "bot_token": bot_token,
+            "chat_id": chat_id,
+            "export_dir": export_dir,
+            "allowed_chat_ids": allowed,
+        }
+    )
+
+    chat_filter = filters.Chat(chat_id=list(allowed))
+    application.add_handler(CommandHandler("start", _cmd_start, filters=chat_filter))
+
+    jq = application.job_queue
+    if jq is None:
+        raise RuntimeError("JobQueue unavailable; pip install 'python-telegram-bot[job-queue]'")
+    jq.run_repeating(_poll_imap, interval=poll_interval, first=5.0)
+
+    logging.info(
+        "email2telegram started | poll=%ss | allowlist=%s | export=%s | state=%s",
+        poll_interval,
+        sorted(allowed),
+        export_dir.resolve() if export_dir else None,
+        state_path,
+    )
+
+    application.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
