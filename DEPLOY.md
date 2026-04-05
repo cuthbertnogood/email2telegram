@@ -4,6 +4,8 @@ The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** publish cont
 
 **End-to-end build chain (multi-arch, VERSION bumps, scripts, CI):** [docs/docker-hub-build-and-vps-plan.md](docs/docker-hub-build-and-vps-plan.md).
 
+**Architecture (Docker on VPS — components, settings, diagrams):** [docs/docker-vps-architecture.md](docs/docker-vps-architecture.md).
+
 ## Docker Hub (recommended)
 
 [Docker Hub](https://hub.docker.com/) opens from **[app.docker.com](https://app.docker.com/)** after sign-in. The image name is always `YOUR_DOCKERHUB_USERNAME/email2telegram:tag` (same string you put in `DOCKER_IMAGE` on the VPS).
