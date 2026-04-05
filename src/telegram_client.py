@@ -3,6 +3,7 @@ from __future__ import annotations
 from telegram import Bot
 
 from message_format import split_for_telegram
+from version import telegram_version_banner
 
 
 def build_message(parsed: dict[str, str], snippet_limit: int = 500) -> str:
@@ -28,12 +29,14 @@ async def send_formatted_text(
     chat_id: str,
     text: str,
     *,
+    service_version: str,
     allowed_chat_ids: frozenset[int] | None = None,
 ) -> None:
     """Send full text, splitting into several Telegram messages if needed."""
     cid = int(chat_id)
     if allowed_chat_ids is not None and cid not in allowed_chat_ids:
         raise RuntimeError(f"Refusing to send: chat_id {cid} not in TELEGRAM_ALLOWED_CHAT_IDS")
+    banner = telegram_version_banner(service_version)
     bot = Bot(token=bot_token)
-    for chunk in split_for_telegram(text):
+    for chunk in split_for_telegram(text, leading_banner=banner):
         await bot.send_message(chat_id=cid, text=chunk)

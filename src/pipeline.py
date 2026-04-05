@@ -27,6 +27,7 @@ async def run_delivery_cycle(
     chat_id: str,
     export_dir: Optional[Path],
     *,
+    service_version: str,
     allowed_chat_ids: frozenset[int] | None = None,
 ) -> None:
     last_seen = state.get_last_seen_uid()
@@ -73,6 +74,7 @@ async def run_delivery_cycle(
                 bot_token=bot_token,
                 chat_id=chat_id,
                 text=formatted,
+                service_version=service_version,
                 allowed_chat_ids=allowed_chat_ids,
             )
             processed.append(uid)

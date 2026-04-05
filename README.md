@@ -2,6 +2,11 @@
 
 Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new messages, and forward them to a Telegram chat. (Other IMAP servers work if you set `IMAP_HOST` accordingly.)
 
+**Version:** see the [`VERSION`](VERSION) file at the repo root. Human-readable history: [`CHANGELOG.md`](CHANGELOG.md). Each Telegram delivery is prefixed with the running service version.
+
+- After changing code under `src/` or `requirements.txt`, run `python3 scripts/bump_code_patch.py` to bump **PATCH** and refresh the fingerprint (commit `VERSION` and `.version/code_fingerprint` with your changes).
+- Each **Docker Hub** build+push via `./scripts/docker-hub-vps.sh hub-build-push` or `make hub-push` bumps **MINOR** before the image build; commit the updated `VERSION` after publishing.
+
 ## Features (MVP)
 
 - Connects to a **Yandex** mailbox via IMAP (`imap.yandex.com` / `imap.yandex.ru`).
@@ -105,6 +110,6 @@ The server rejected `IMAP_USER` / `IMAP_PASS`. For Yandex, check:
 ## Manual verification checklist
 
 1. Send a new test email to the configured inbox.
-2. Check Telegram: message(s) with full headers and body (long bodies may arrive as several messages, numbered `1/n`).
+2. Check Telegram: each message starts with `[email2telegram v…]`; then full headers and body (long bodies may arrive as several parts, numbered `1/n`).
 3. Restart the service and verify previously forwarded email is not resent.
 4. Send UTF-8 subject/body email and verify text is decoded correctly.

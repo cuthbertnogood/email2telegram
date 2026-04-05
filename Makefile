@@ -27,7 +27,9 @@ hub-login:
 	docker login -u $(DOCKER_USER)
 
 hub-build:
-	docker build -t $(IMAGE):$(TAG) -t $(IMAGE):$(GIT_SHA) .
+	python3 scripts/bump_docker_minor.py
+	APP_VERSION=$$(tr -d '[:space:]' < VERSION); \
+	docker build --build-arg APP_VERSION=$$APP_VERSION -t $(IMAGE):$(TAG) -t $(IMAGE):$(GIT_SHA) .
 
 hub-push: hub-build
 	docker push $(IMAGE):$(TAG)

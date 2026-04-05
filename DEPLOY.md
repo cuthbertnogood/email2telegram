@@ -20,15 +20,20 @@ The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** publish cont
 
 ### C. Build and push from your machine
 
+**Versioning (short):** `VERSION` at the repo root is `MAJOR.MINOR.PATCH`. **PATCH** increases when you run `python3 scripts/bump_code_patch.py` after edits to `src/**/*.py` or `requirements.txt` (updates `.version/code_fingerprint`). **MINOR** increases automatically **before** each Hub image build when you use the scripted flows below—commit the new `VERSION` after a successful push.
+
 ```bash
 cd /path/to/email2telegram
 docker login -u YOUR_DOCKERHUB_USER
-# Optional smoke test (same Dockerfile as the Hub image): docker build -t email2telegram:local .
+# Optional smoke test (no MINOR bump): read version into label
+# v=$(tr -d '[:space:]' < VERSION); docker build --build-arg "APP_VERSION=$v" -t email2telegram:local .
 docker build -t YOUR_DOCKERHUB_USER/email2telegram:latest .
 docker push YOUR_DOCKERHUB_USER/email2telegram:latest
 ```
 
-Or: `make hub-push DOCKER_USER=YOUR_DOCKERHUB_USER`.
+Manual `docker build` / `docker push` as above does **not** bump **MINOR**; prefer:
+
+Or: `make hub-push DOCKER_USER=YOUR_DOCKERHUB_USER` (bumps **MINOR**, passes `APP_VERSION`, builds, pushes `:latest` and `:$GIT_SHA`).
 
 Or: after `docker login`, `DOCKER_USER=YOUR_DOCKERHUB_USER ./scripts/docker-hub-vps.sh hub-build-push`. UI steps for the Hub repo and PAT: `./scripts/docker-hub-vps.sh hub-checklist`.
 

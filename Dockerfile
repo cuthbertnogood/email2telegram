@@ -9,7 +9,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY VERSION ./VERSION
 COPY src/ ./src/
+
+ARG APP_VERSION=unknown
+LABEL org.opencontainers.image.version="${APP_VERSION}"
 RUN chown -R appuser:appuser /app
 
 USER appuser

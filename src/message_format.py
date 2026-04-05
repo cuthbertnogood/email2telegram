@@ -10,7 +10,6 @@ from typing import List
 TELEGRAM_MAX_MESSAGE_LENGTH = 4096
 # Reserve for "(part i/n)\n" line
 _PART_OVERHEAD = 32
-_CHUNK = TELEGRAM_MAX_MESSAGE_LENGTH - _PART_OVERHEAD
 
 
 def format_email_plain(parsed: dict[str, str]) -> str:
@@ -24,16 +23,21 @@ def format_email_plain(parsed: dict[str, str]) -> str:
     )
 
 
-def split_for_telegram(text: str) -> List[str]:
-    """Split into chunks that fit Telegram after optional part prefix."""
-    if len(text) <= TELEGRAM_MAX_MESSAGE_LENGTH:
-        return [text]
+def split_for_telegram(text: str, *, leading_banner: str = "") -> List[str]:
+    """Split into chunks that fit Telegram after optional banner and part prefix."""
+    banner_prefix = (leading_banner + "\n") if leading_banner else ""
+    overhead = _PART_OVERHEAD + len(banner_prefix)
+    max_body_per_message = TELEGRAM_MAX_MESSAGE_LENGTH - overhead
+    if max_body_per_message <= 0:
+        raise ValueError("leading_banner is too long for Telegram message limit")
+
+    if len(banner_prefix) + len(text) <= TELEGRAM_MAX_MESSAGE_LENGTH:
+        return [banner_prefix + text] if banner_prefix else [text]
+
     raw_chunks: List[str] = []
     pos = 0
     while pos < len(text):
-        raw_chunks.append(text[pos : pos + _CHUNK])
-        pos += _CHUNK
+        raw_chunks.append(text[pos : pos + max_body_per_message])
+        pos += max_body_per_message
     n = len(raw_chunks)
-    if n <= 1:
-        return raw_chunks
-    return [f"({i + 1}/{n})\n{chunk}" for i, chunk in enumerate(raw_chunks)]
+    return [f"{banner_prefix}({i + 1}/{n})\n{chunk}" for i, chunk in enumerate(raw_chunks)]

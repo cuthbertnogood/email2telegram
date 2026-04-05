@@ -12,7 +12,7 @@ docker-hub-vps.sh — build/push image, copy compose to VPS, remote pull/up.
 
 Commands:
   hub-checklist     Print Docker Hub UI steps (repo + PAT).
-  hub-build-push    Build and push YOUR_USER/email2telegram:TAG (needs: docker login).
+  hub-build-push    Bump MINOR in VERSION, build with image label, push (needs: docker login).
                     Env: DOCKER_USER (required), TAG (default latest).
   scp-compose VPS   scp docker-compose.hub.yml (+ systemd unit) to VPS:/opt/email2telegram/
                     Example: ./scripts/docker-hub-vps.sh scp-compose deploy@203.0.113.10
@@ -47,9 +47,12 @@ hub_build_push() {
   local user="${DOCKER_USER:?Set DOCKER_USER to your Docker Hub username}"
   local tag="${TAG:-latest}"
   local image="${user}/email2telegram:${tag}"
-  docker build -t "$image" .
+  python3 "$ROOT/scripts/bump_docker_minor.py"
+  local ver
+  ver="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+  docker build --build-arg "APP_VERSION=${ver}" -t "$image" .
   docker push "$image"
-  echo "Pushed: $image"
+  echo "Pushed: $image (image version ${ver}; commit updated VERSION for next git commit)"
 }
 
 scp_compose() {

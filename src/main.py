@@ -10,6 +10,7 @@ from allowlist import parse_allowed_chat_ids
 from imap_client import ImapClient
 from pipeline import load_export_dir_from_env, run_delivery_cycle
 from state import StateStore
+from version import get_version
 
 
 def _required_env(name: str) -> str:
@@ -32,6 +33,7 @@ async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
             bot_token=bd["bot_token"],
             chat_id=bd["chat_id"],
             export_dir=bd["export_dir"],
+            service_version=bd["service_version"],
             allowed_chat_ids=bd["allowed_chat_ids"],
         )
     except Exception:
@@ -40,7 +42,10 @@ async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def _cmd_start(update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message:
-        await update.message.reply_text("email2telegram: почта доставляется в этот чат.")
+        ver = context.application.bot_data["service_version"]
+        await update.message.reply_text(
+            f"email2telegram v{ver}: почта доставляется в этот чат."
+        )
 
 
 def main() -> None:
@@ -73,6 +78,7 @@ def main() -> None:
         mailbox=imap_mailbox,
     )
     state = StateStore(path=state_path)
+    service_version = get_version()
 
     application = Application.builder().token(bot_token).build()
 
@@ -84,6 +90,7 @@ def main() -> None:
             "chat_id": chat_id,
             "export_dir": export_dir,
             "allowed_chat_ids": allowed,
+            "service_version": service_version,
         }
     )
 
@@ -96,7 +103,8 @@ def main() -> None:
     jq.run_repeating(_poll_imap, interval=poll_interval, first=5.0)
 
     logging.info(
-        "email2telegram started | poll=%ss | allowlist=%s | export=%s | state=%s",
+        "email2telegram v%s started | poll=%ss | allowlist=%s | export=%s | state=%s",
+        service_version,
         poll_interval,
         sorted(allowed),
         export_dir.resolve() if export_dir else None,
