@@ -5,7 +5,7 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
 **Version:** see the [`VERSION`](VERSION) file at the repo root. Human-readable history: [`CHANGELOG.md`](CHANGELOG.md). Each Telegram delivery is prefixed with the running service version.
 
 - After changing code under `src/` or `requirements.txt`, run `python3 scripts/bump_code_patch.py` to bump **PATCH** and refresh the fingerprint (commit `VERSION` and `.version/code_fingerprint` with your changes).
-- Each **Docker Hub** build+push via `./scripts/docker-hub-vps.sh hub-build-push` or `make hub-push` bumps **MINOR** before the image build; commit the updated `VERSION` after publishing.
+- Each **Docker Hub** publish via **`./scripts/docker-hub-publish.sh`** (or `make hub-push` / `./scripts/docker-hub-vps.sh hub-build-push`, same script) bumps **MINOR** before the image build; commit the updated `VERSION` after publishing.
 
 ## Features (MVP)
 

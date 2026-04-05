@@ -1,0 +1,13 @@
+# Run email2telegram-hub-update.service every 10 minutes.
+# See email2telegram-hub-update.service for install steps.
+
+[Unit]
+Description=Every 10 minutes — email2telegram Hub image refresh
+
+[Timer]
+OnCalendar=*-*-* *:0/10:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

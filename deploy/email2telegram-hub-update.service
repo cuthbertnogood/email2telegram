@@ -1,0 +1,19 @@
+# Oneshot: pull Hub image and recreate stack (used by the timer below).
+# Install on VPS:
+#   sudo cp /opt/email2telegram/email2telegram-hub-update.service /etc/systemd/system/
+#   sudo cp /opt/email2telegram/email2telegram-hub-update.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now email2telegram-hub-update.timer
+#
+# flock avoids overlapping runs if pull takes longer than the timer interval.
+
+[Unit]
+Description=email2telegram Docker Hub pull and compose up
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/email2telegram
+# Adjust path if EMAIL2TELEGRAM_DIR is not /opt/email2telegram.
+ExecStart=/bin/bash -c '/usr/bin/flock -n /opt/email2telegram/.vps-update-hub.lock /opt/email2telegram/vps-update-hub.sh'
