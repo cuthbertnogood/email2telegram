@@ -19,21 +19,17 @@ pull:
 
 # --- Docker Hub (set DOCKER_USER to your hub username) ---
 DOCKER_USER ?= yourdockerhub
-IMAGE ?= $(DOCKER_USER)/email2telegram
 TAG ?= latest
-GIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo local)
 
 hub-login:
 	docker login -u $(DOCKER_USER)
 
+# Delegates to scripts/docker-hub-publish.sh (always runs bump_docker_minor.py).
 hub-build:
-	python3 scripts/bump_docker_minor.py
-	APP_VERSION=$$(tr -d '[:space:]' < VERSION); \
-	docker build --build-arg APP_VERSION=$$APP_VERSION -t $(IMAGE):$(TAG) -t $(IMAGE):$(GIT_SHA) .
+	DOCKER_USER=$(DOCKER_USER) TAG=$(TAG) ./scripts/docker-hub-publish.sh
 
+# Pushes are done inside hub-build (buildx --push). Kept as an alias for existing docs.
 hub-push: hub-build
-	docker push $(IMAGE):$(TAG)
-	docker push $(IMAGE):$(GIT_SHA)
 
 # On VPS with docker-compose.hub.yml + DOCKER_IMAGE in .env
 vps-pull:
