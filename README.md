@@ -1,5 +1,7 @@
 # email2telegram (MVP)
 
+English | [Русский](README.ru.md)
+
 Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new messages, and forward them to a Telegram chat. (Other IMAP servers work if you set `IMAP_HOST` accordingly.)
 
 **Version:** see the [`VERSION`](VERSION) file at the repo root. Human-readable history: [`CHANGELOG.md`](CHANGELOG.md). Each Telegram delivery is prefixed with the running service version.
