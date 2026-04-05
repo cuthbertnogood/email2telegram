@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Hub deploy path: `vps-update-hub.sh`, `vps-up-remote`, `make vps-pull`, and `deploy/email2telegram.service` now run `docker compose … up -d --force-recreate` after `pull` so the container is recreated from the new image. `DEPLOY.md` adds version-sync notes (local publish vs CI tag) and VPS verification commands (`/app/VERSION`, OCI label).
+
+## [0.4.1] - 2026-04-05
+
+### Changed
+
+- `VERSION` set to **0.4.1**.
+- `DEPLOY.md`: Markdown/link formatting in the Hub deploy and periodic-pull sections; tighter list layout under “Get the new image onto the VPS”.
+- `docs/docker-vps-architecture.md`: wider host-components table, spacing around Mermaid blocks, and normalized line endings (LF).
+
 ## [0.3.1] - 2026-04-05
 
 ### Added

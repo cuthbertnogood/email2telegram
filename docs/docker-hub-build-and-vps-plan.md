@@ -154,7 +154,7 @@ DOCKER_USER=YOUR_HUB_USER ./scripts/docker-hub-vps.sh hub-build-push
 | Локальный файл                              | На VPS после копирования                              | Зачем на VPS                                                    |
 | ------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
 | `docker-compose.hub.yml`                    | `/opt/email2telegram/docker-compose.hub.yml`          | Описание сервиса: образ из `DOCKER_IMAGE`, том, логи            |
-| `deploy/vps-update-hub.sh`                  | `/opt/email2telegram/vps-update-hub.sh`               | Удобное обновление: `pull` + `up -d` из каталога                |
+| `deploy/vps-update-hub.sh`                  | `/opt/email2telegram/vps-update-hub.sh`               | Удобное обновление: `pull` + `up -d --force-recreate` из каталога |
 | `deploy/email2telegram.service`             | `/opt/email2telegram/email2telegram.service`          | Шаблон unit systemd (потом копируется в `/etc/systemd/system/`) |
 | `deploy/email2telegram-hub-update.service`  | `/opt/email2telegram/email2telegram-hub-update.service` | Опционально: oneshot для периодического `pull` (см. DEPLOY.md)   |
 | `deploy/email2telegram-hub-update.timer`    | `/opt/email2telegram/email2telegram-hub-update.timer`   | Опционально: запуск раз в 10 минут                               |
@@ -198,7 +198,7 @@ chmod +x /opt/email2telegram/vps-update-hub.sh
 
 По **SSH** заходит на сервер, переходит в каталог (по умолчанию `/opt/email2telegram`) и выполняет:
 
-`docker compose -f docker-compose.hub.yml pull && … up -d && … ps`
+`docker compose -f docker-compose.hub.yml pull && … up -d --force-recreate && … ps`
 
 Удобно обновить стек **с ПК** после нового push в Hub. Второй аргумент — другой путь на сервере, если не используете `/opt/email2telegram`.
 
@@ -242,7 +242,7 @@ sudo systemctl enable --now email2telegram.service
 1. На VPS: пользователь, Docker, каталог `/opt/email2telegram` и права (см. выше).
 2. На ПК: `./scripts/docker-hub-vps.sh scp-compose user@vps`
 3. На VPS: создать `.env` (`DOCKER_IMAGE`, IMAP, Telegram), `chmod 600 .env`, при приватном образе — `docker login`.
-4. На VPS: `chmod +x vps-update-hub.sh`; первый запуск: `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d` **или** `./vps-update-hub.sh`.
+4. На VPS: `chmod +x vps-update-hub.sh`; первый запуск: `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d --force-recreate` **или** `./vps-update-hub.sh`.
 5. Дальше обновления образа: с ПК `./scripts/docker-hub-vps.sh vps-up-remote user@vps` или на VPS `./vps-update-hub.sh`; либо первично всё сразу: `./scripts/docker-hub-vps.sh hub-deploy-vps user@vps` (включает таймер раз в 10 минут).
 6. По желанию: автозапуск стека при загрузке — systemd по выводу `systemd-hints`.
 7. Таймер периодического `pull` с Hub: входит в `hub-deploy-vps`; иначе вручную — [DEPLOY.md section 7](../DEPLOY.md).
@@ -299,7 +299,7 @@ flowchart TB
 
   subgraph vps [VPS]
     PULL[pull]
-    UP[up -d]
+    UP[up -d --force-recreate]
     IMG --> PULL --> UP
   end
 ```
@@ -316,7 +316,7 @@ flowchart TB
 4. `DOCKER_USER=… ./scripts/docker-hub-publish.sh` (или `make hub-push` / `hub-build-push`).
 5. Закоммитить **новый** `VERSION` после успешного push.
 6. На VPS: `.env` с `DOCKER_IMAGE`, при необходимости `docker login`.
-7. `pull` + `up -d` (или `vps-update-hub.sh`, или `vps-up-remote` с ПК).
+7. `pull` + `up -d --force-recreate` (или `vps-update-hub.sh`, или `vps-up-remote` с ПК).
 
 Подробности по сети, UFW и путям: `[DEPLOY.md](../DEPLOY.md)`.
 

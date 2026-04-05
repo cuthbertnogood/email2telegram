@@ -8,14 +8,16 @@
 
 ## Компоненты на хосте (VPS)
 
-| Компонент | Роль |
-|-----------|------|
-| **Docker Engine + Compose plugin** | Запуск контейнера, тома, логи |
-| **Каталог проекта** (часто `/opt/email2telegram`) | `docker-compose*.yml`, `.env`, при Hub-деплое — скопированные `vps-update-hub.sh` и unit-файлы |
-| **`.env`** | Секреты и настройки (не в образе); права `chmod 600` |
-| **`email2telegram.service`** (опционально) | systemd: при загрузке `pull` + `up -d` — см. [deploy/email2telegram.service](../deploy/email2telegram.service) |
-| **`email2telegram-hub-update.timer`** (опционально) | Каждые ~10 минут запускает pull+up для нового образа с Hub — [deploy/email2telegram-hub-update.timer](../deploy/email2telegram-hub-update.timer), [deploy/email2telegram-hub-update.service](../deploy/email2telegram-hub-update.service), скрипт [deploy/vps-update-hub.sh](../deploy/vps-update-hub.sh) |
-| **UFW / фаервол** | Достаточно SSH; входящих правил под приложение нет |
+
+| Компонент                                           | Роль                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Docker Engine + Compose plugin**                  | Запуск контейнера, тома, логи                                                                                                                                                                                                                                                                             |
+| **Каталог проекта** (часто `/opt/email2telegram`)   | `docker-compose*.yml`, `.env`, при Hub-деплое — скопированные `vps-update-hub.sh` и unit-файлы                                                                                                                                                                                                            |
+| `**.env`**                                          | Секреты и настройки (не в образе); права `chmod 600`                                                                                                                                                                                                                                                      |
+| `**email2telegram.service**` (опционально)          | systemd: при загрузке `pull` + `up -d --force-recreate` — см. [deploy/email2telegram.service](../deploy/email2telegram.service)                                                                                                                                                                           |
+| `**email2telegram-hub-update.timer**` (опционально) | Каждые ~10 минут запускает pull + `up -d --force-recreate` для нового образа с Hub — [deploy/email2telegram-hub-update.timer](../deploy/email2telegram-hub-update.timer), [deploy/email2telegram-hub-update.service](../deploy/email2telegram-hub-update.service), скрипт [deploy/vps-update-hub.sh](../deploy/vps-update-hub.sh) |
+| **UFW / фаервол**                                   | Достаточно SSH; входящих правил под приложение нет                                                                                                                                                                                                                                                        |
+
 
 ---
 
@@ -24,11 +26,11 @@
 ### Образ ([Dockerfile](../Dockerfile))
 
 - База: `python:3.12-slim-bookworm`
-- Пользователь **`appuser` (uid 1000)**, рабочая директория `/app`
+- Пользователь `**appuser` (uid 1000)**, рабочая директория `/app`
 - Установка зависимостей из `requirements.txt`, копирование `src/`, метка версии `APP_VERSION`
-- **`VOLUME /data`** — сюда монтируется именованный том Compose
+- `**VOLUME /data`** — сюда монтируется именованный том Compose
 - В образе по умолчанию: `PYTHONUNBUFFERED=1`, `STATE_FILE=/data/.state.json`
-- **`CMD ["python", "src/main.py"]`**
+- `**CMD ["python", "src/main.py"]**`
 
 ### Сервис Compose (один контейнер)
 
@@ -40,7 +42,7 @@
 Общие черты обоих:
 
 - `env_file: .env` + явные `environment`: `STATE_FILE=/data/.state.json`, `TZ: ${TZ:-UTC}`
-- Том **`email2telegram_data` → `/data`** (состояние и опционально экспорт `.eml`)
+- Том `**email2telegram_data` → `/data`** (состояние и опционально экспорт `.eml`)
 - Логи: `json-file`, ротация 10MB × 3 файла
 - `restart: unless-stopped`, `stop_grace_period: 30s`
 - **Порты не пробрасываются** — в файлах нет `ports:`
@@ -49,7 +51,7 @@
 
 ## Настройки (переменные окружения)
 
-Источник правды для примера: [`.env.example`](../.env.example). В контейнер попадают через `env_file` и блок `environment` в compose.
+Источник правды для примера: `[.env.example](../.env.example)`. В контейнер попадают через `env_file` и блок `environment` в compose.
 
 **Обязательные для работы приложения** (см. [src/main.py](../src/main.py)):
 
@@ -60,7 +62,7 @@
 
 - `STATE_FILE` задаётся compose как `/data/.state.json`, чтобы **курсор по UID** переживал пересоздание контейнера (том `email2telegram_data`)
 - Опционально `TZ` — часовой пояс логов
-- Для Hub: **`DOCKER_IMAGE`** в `.env` (например `user/email2telegram:latest`) — подставляется в [docker-compose.hub.yml](../docker-compose.hub.yml)
+- Для Hub: `**DOCKER_IMAGE`** в `.env` (например `user/email2telegram:latest`) — подставляется в [docker-compose.hub.yml](../docker-compose.hub.yml)
 
 **Опционально приложения:**
 
@@ -72,11 +74,11 @@
 
 Точка входа: [src/main.py](../src/main.py).
 
-1. **`load_dotenv()`** подхватывает `.env` (дублирует/дополняет то, что уже передал Docker).
-2. Создаётся **`ImapClient`**, **`StateStore(path=STATE_FILE)`**, версия сервиса.
-3. Поднимается **`python-telegram-bot`** `Application` с **long polling** к Telegram (`run_polling`).
-4. В **JobQueue** по расписанию вызывается **`_poll_imap`** → **`run_delivery_cycle`** ([src/pipeline.py](../src/pipeline.py)): в потоке забираются новые письма с IMAP, при необходимости пишутся `.eml`, парсятся, форматируются, отправляются через Bot API в выбранный чат; состояние обновляется на диске.
-5. Команда **`/start`** обрабатывается только для чатов из allowlist.
+1. `**load_dotenv()`** подхватывает `.env` (дублирует/дополняет то, что уже передал Docker).
+2. Создаётся `**ImapClient**`, `**StateStore(path=STATE_FILE)**`, версия сервиса.
+3. Поднимается `**python-telegram-bot**` `Application` с **long polling** к Telegram (`run_polling`).
+4. В **JobQueue** по расписанию вызывается `**_poll_imap`** → `**run_delivery_cycle**` ([src/pipeline.py](../src/pipeline.py)): в потоке забираются новые письма с IMAP, при необходимости пишутся `.eml`, парсятся, форматируются, отправляются через Bot API в выбранный чат; состояние обновляется на диске.
+5. Команда `**/start**` обрабатывается только для чатов из allowlist.
 
 Сеть: контейнер сам инициирует исходящие TLS-сессии к провайдеру IMAP и к Telegram; **входящих подключений к VPS для этого сервиса не требуется**.
 
@@ -116,6 +118,8 @@ flowchart TB
   tg[Telegram Bot API] <-->|outbound polling + send| ctr
 ```
 
+
+
 ### Поток данных приложения внутри контейнера
 
 ```mermaid
@@ -139,6 +143,8 @@ sequenceDiagram
   end
 ```
 
+
+
 ### Связь файлов конфигурации и тома
 
 ```mermaid
@@ -151,6 +157,8 @@ flowchart LR
   ctr -->|read write| dataVol
 ```
 
+
+
 ---
 
 ## Итог
@@ -158,4 +166,5 @@ flowchart LR
 - **Один сервис, один контейнер**, персистентность через **именованный том** (`state`, опционально `mail_export`).
 - **Секреты** только в `.env` на хосте; образ их не содержит.
 - **Сеть**: исходящий HTTPS; **порты не экспонируются**.
-- **Обновления**: вручную `compose pull && up -d`, с ПК через скрипты из [DEPLOY.md](../DEPLOY.md), или автоматически таймером Hub-update.
+- **Обновления**: вручную `compose pull && up -d --force-recreate`, с ПК через скрипты из [DEPLOY.md](../DEPLOY.md), или автоматически таймером Hub-update.
+

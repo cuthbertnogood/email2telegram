@@ -15,7 +15,7 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/email2telegram
 # Use docker-compose.hub.yml if the image is pulled from Docker Hub:
-ExecStart=/bin/sh -c '/usr/bin/docker compose -f docker-compose.hub.yml pull && /usr/bin/docker compose -f docker-compose.hub.yml up -d'
+ExecStart=/bin/sh -c '/usr/bin/docker compose -f docker-compose.hub.yml pull && /usr/bin/docker compose -f docker-compose.hub.yml up -d --force-recreate'
 ExecStop=/bin/sh -c '/usr/bin/docker compose -f docker-compose.hub.yml down'
 # For build on server instead, swap for: docker compose up -d --build
 TimeoutStartSec=0

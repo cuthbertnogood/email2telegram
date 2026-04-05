@@ -61,7 +61,7 @@ From your PC (after `/opt/email2telegram` exists and is owned by your user on th
 ./scripts/docker-hub-vps.sh hub-deploy-vps YOUR_USER@VPS_HOST
 ```
 
-This runs `scp-compose`, remote `docker compose pull && up -d`, then installs and enables **`email2telegram-hub-update.timer`** so the host pulls fresh Hub images every 10 minutes (see [section 7](#7-periodic-hub-pull-every-10-minutes-optional)). `ssh -t` is used so `sudo` can prompt for a password when copying unit files.
+This runs `scp-compose`, remote `docker compose pull && up -d --force-recreate`, then installs and enables `**email2telegram-hub-update.timer**` so the host pulls fresh Hub images every 10 minutes (see [section 7](#7-periodic-hub-pull-every-10-minutes-optional)). `ssh -t` is used so `sudo` can prompt for a password when copying unit files.
 
 ```bash
 mkdir -p /opt/email2telegram && cd /opt/email2telegram
@@ -76,7 +76,7 @@ DOCKER_IMAGE=YOUR_DOCKERHUB_USER/email2telegram:latest
 
 ```bash
 docker compose -f docker-compose.hub.yml pull
-docker compose -f docker-compose.hub.yml up -d
+docker compose -f docker-compose.hub.yml up -d --force-recreate
 docker compose -f docker-compose.hub.yml logs -f
 ```
 
@@ -87,6 +87,8 @@ Or from that directory: `make vps-pull`.
 `pull_policy: always` in `docker-compose.hub.yml` helps use the newest `latest` after each `pull`.
 
 ### F. New releases (every time you ship a new image)
+
+**Version vs. git:** After a **local** `./scripts/docker-hub-publish.sh`, commit and push `VERSION` (step 4 below). **GitHub Actions** (tag `v*`) builds whatever `VERSION` is in the **tagged** commit — the workflow does not run `bump_docker_minor.py`; bump `VERSION` in that commit before tagging. Full matrix: [docs/docker-hub-build-and-vps-plan.md](docs/docker-hub-build-and-vps-plan.md).
 
 Use this after the VPS is already set up (`.env`, stack running, optional [section 7](#7-periodic-hub-pull-every-10-minutes-optional) timer).
 
@@ -121,28 +123,21 @@ git push
 
 **5. Get the new image onto the VPS — pick one:**
 
-- **A — Automatic (recommended if the timer is enabled):** do nothing for up to ~10 minutes. On the VPS the service `email2telegram-hub-update` runs `docker compose pull` + `up -d` on a schedule. Check:
-
+- **A — Automatic (recommended if the timer is enabled):** do nothing for up to ~10 minutes. On the VPS the service `email2telegram-hub-update` runs `docker compose pull` + `up -d --force-recreate` on a schedule (via `vps-update-hub.sh`). Check:
   ```bash
   # on the VPS
   journalctl -u email2telegram-hub-update.service -n 30 --no-pager
   docker compose -f /opt/email2telegram/docker-compose.hub.yml ps
   ```
-
 - **B — Manual from your PC right after push** (SSH port 22):
-
   ```bash
   ./scripts/docker-hub-vps.sh vps-up-remote YOUR_USER@VPS_HOST
   ```
-
   Non-default SSH port (example: `2222`; use your server’s port):
-
   ```bash
   ./scripts/docker-hub-vps.sh -p 2222 vps-up-remote YOUR_USER@VPS_HOST
   ```
-
   Or with an env var:
-
   ```bash
   VPS_SSH_PORT=2222 ./scripts/docker-hub-vps.sh vps-up-remote YOUR_USER@VPS_HOST
   ```
@@ -154,6 +149,16 @@ cd /opt/email2telegram
 docker compose -f docker-compose.hub.yml ps
 docker compose -f docker-compose.hub.yml logs --tail 50 email2telegram
 ```
+
+**7. Confirm the running image matches the version you shipped** (embedded at build time):
+
+```bash
+docker compose -f docker-compose.hub.yml exec email2telegram cat /app/VERSION
+docker inspect email2telegram --format '{{index .Config.Labels "org.opencontainers.image.version"}}'
+docker compose -f docker-compose.hub.yml images
+```
+
+If `pull` succeeded but the version is still old, run `docker compose -f docker-compose.hub.yml up -d --force-recreate` (or re-run `vps-update-hub.sh` / `vps-up-remote` after upgrading those scripts from the repo).
 
 **Note:** You do **not** need to re-run `hub-deploy-vps` for every release unless you changed compose files, `vps-update-hub.sh`, or systemd units in the repo.
 
@@ -228,7 +233,7 @@ docker compose logs -f
 
 Updates:
 
-- **Hub:** `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d` — or from your PC: `./scripts/docker-hub-vps.sh vps-up-remote YOUR_USER@VPS_HOST`
+- **Hub:** `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d --force-recreate` — or from your PC: `./scripts/docker-hub-vps.sh vps-up-remote YOUR_USER@VPS_HOST`
 - **Local build:** `git pull && docker compose up -d --build`
 
 ## 6. Auto-start on boot (optional)
@@ -258,9 +263,9 @@ Same steps as a reminder: `./scripts/docker-hub-vps.sh systemd-hints`
 
 ## 7. Periodic Hub pull (every 10 minutes, optional)
 
-To pick up new `latest` (or your tag) from Docker Hub without manual `pull`, enable the **systemd timer** below. It runs [`deploy/vps-update-hub.sh`](deploy/vps-update-hub.sh) on a fixed cadence; logs go to the journal. The service unit uses `flock -n` so a long `pull` does not overlap the next scheduled run. The script calls `/usr/bin/docker` by default.
+To pick up new `latest` (or your tag) from Docker Hub without manual `pull`, enable the **systemd timer** below. It runs `[deploy/vps-update-hub.sh](deploy/vps-update-hub.sh)` on a fixed cadence (`pull` + `up -d --force-recreate`); logs go to the journal. The service unit uses `flock -n` so a long `pull` does not overlap the next scheduled run. The script calls `/usr/bin/docker` by default.
 
-If you already ran **`./scripts/docker-hub-vps.sh hub-deploy-vps …`** (see **Docker Hub → E. VPS** above), this timer is already installed and started.
+If you already ran `**./scripts/docker-hub-vps.sh hub-deploy-vps …`** (see **Docker Hub → E. VPS** above), this timer is already installed and started.
 
 Otherwise, after `scp-compose` or a manual copy to `/opt/email2telegram`, install on the VPS:
 
@@ -275,7 +280,7 @@ journalctl -u email2telegram-hub-update.service -n 50 --no-pager
 
 If the project directory is not `/opt/email2telegram`, edit `WorkingDirectory`, `ExecStart` paths, and the lock file path in `email2telegram-hub-update.service` before `daemon-reload`.
 
-Timer templates in the repo: [`deploy/email2telegram-hub-update.service`](deploy/email2telegram-hub-update.service), [`deploy/email2telegram-hub-update.timer`](deploy/email2telegram-hub-update.timer).
+Timer templates in the repo: `[deploy/email2telegram-hub-update.service](deploy/email2telegram-hub-update.service)`, `[deploy/email2telegram-hub-update.timer](deploy/email2telegram-hub-update.timer)`.
 
 ## 8. Operations
 

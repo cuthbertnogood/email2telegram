@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Run on the VPS: pull the image from Docker Hub and restart the stack.
+# Run on the VPS: pull the image from Docker Hub and recreate the stack.
+# Uses `up -d --force-recreate` so the container is rebuilt from the pulled image
+# (not only restarted with a stale local layer).
 # Expects docker-compose.hub.yml and .env in the working directory.
 #
 # Default directory: /opt/email2telegram (override with EMAIL2TELEGRAM_DIR).
@@ -17,7 +19,7 @@ DOCKER="${DOCKER:-/usr/bin/docker}"
 
 usage() {
   cat <<'EOF'
-vps-update-hub.sh — docker compose pull + up -d for the Hub-based stack.
+vps-update-hub.sh — docker compose pull + up -d --force-recreate for the Hub-based stack.
 
 Environment:
   EMAIL2TELEGRAM_DIR     Project directory (default: /opt/email2telegram)
@@ -46,6 +48,6 @@ fi
 
 echo "Updating email2telegram ($ROOT, $COMPOSE_FILE)..."
 "$DOCKER" compose -f "$COMPOSE_FILE" pull
-"$DOCKER" compose -f "$COMPOSE_FILE" up -d
+"$DOCKER" compose -f "$COMPOSE_FILE" up -d --force-recreate
 "$DOCKER" compose -f "$COMPOSE_FILE" ps
 echo "Done."

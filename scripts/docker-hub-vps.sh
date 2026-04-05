@@ -46,7 +46,7 @@ Commands:
   vps-install-docker
                     Print one-liner to run ON the VPS (Ubuntu) to install Docker Engine + Compose.
   vps-up-remote VPS [path]
-                    SSH: cd path (default /opt/email2telegram), compose pull && up -d.
+                    SSH: cd path (default /opt/email2telegram), compose pull && up -d --force-recreate.
                     Example: ./scripts/docker-hub-vps.sh -p 2222 vps-up-remote deploy@203.0.113.10
   vps-enable-hub-timer VPS [path]
                     SSH + sudo: install and enable email2telegram-hub-update.timer (10-minute Hub pull).
@@ -158,7 +158,7 @@ vps_up_remote() {
   local opts
   opts="$(vps_ssh_opts)"
   # shellcheck disable=SC2086
-  ssh $opts "$target" "cd $(printf %q "$rdir") && docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d && docker compose -f docker-compose.hub.yml ps"
+  ssh $opts "$target" "cd $(printf %q "$rdir") && docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d --force-recreate && docker compose -f docker-compose.hub.yml ps"
   # shellcheck disable=SC2086
   echo "Done. Logs: ssh $opts $target 'cd $(printf %q "$rdir") && docker compose -f docker-compose.hub.yml logs -f'"
 }

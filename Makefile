@@ -33,4 +33,4 @@ hub-push: hub-build
 
 # On VPS with docker-compose.hub.yml + DOCKER_IMAGE in .env
 vps-pull:
-	docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d
+	docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d --force-recreate
