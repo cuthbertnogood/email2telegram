@@ -17,16 +17,15 @@ build:
 pull:
 	git pull && docker compose up -d --build
 
-# --- Docker Hub (set DOCKER_USER to your hub username) ---
-DOCKER_USER ?= yourdockerhub
+# --- Docker Hub: DOCKER_USER in shell, or in .env (see .env.example) ---
 TAG ?= latest
 
 hub-login:
-	docker login -u $(DOCKER_USER)
+	@if [ -n "$(DOCKER_USER)" ]; then docker login -u "$(DOCKER_USER)"; else docker login; fi
 
-# Delegates to scripts/docker-hub-publish.sh (always runs bump_docker_minor.py).
+# Delegates to scripts/docker-hub-build-push.sh (bump_docker_minor.py unless NO_BUMP=1).
 hub-build:
-	DOCKER_USER=$(DOCKER_USER) TAG=$(TAG) ./scripts/docker-hub-publish.sh
+	DOCKER_USER=$(DOCKER_USER) TAG=$(TAG) ./scripts/docker-hub-build-push.sh
 
 # Pushes are done inside hub-build (buildx --push). Kept as an alias for existing docs.
 hub-push: hub-build

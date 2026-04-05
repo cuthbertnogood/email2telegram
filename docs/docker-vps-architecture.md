@@ -1,8 +1,6 @@
-# Архитектура сервиса email2telegram в Docker на VPS
+# Архитектура: Docker на VPS
 
-## Суть продукта
-
-Это **не веб-сервер**: один долгоживущий процесс **опрашивает почту по IMAP** и **отправляет текст в Telegram** через Bot API. На VPS **не публикуются** порты наружу — нужен только **исходящий** HTTPS (IMAP + `api.telegram.org`). Подробности эксплуатации: [DEPLOY.md](../DEPLOY.md).
+Не веб-сервер: один процесс опрашивает **IMAP** и шлёт текст в **Telegram**. Порты наружу не открываются — только исходящий HTTPS. Эксплуатация: [DEPLOY.md](../DEPLOY.md).
 
 ---
 
@@ -89,7 +87,7 @@
 1. **Docker Hub** — на сервере только `docker-compose.hub.yml` + `.env` + скрипты/units при желании; образ тянется по `DOCKER_IMAGE`.
 2. **Сборка на сервере** — полный клон репозитория, `docker compose up -d --build` с [docker-compose.yml](../docker-compose.yml).
 
-Связанный документ по цепочке сборки и Hub: [docker-hub-build-and-vps-plan.md](docker-hub-build-and-vps-plan.md).
+Цепочка Hub и скрипты: [docker-hub-build-and-vps-plan.md](docker-hub-build-and-vps-plan.md).
 
 ---
 

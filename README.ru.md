@@ -7,7 +7,7 @@
 **Версия:** см. файл [`VERSION`](VERSION) в корне репозитория. История изменений: [`CHANGELOG.md`](CHANGELOG.md). Каждое исходящее сообщение в Telegram начинается с версии запущенного сервиса.
 
 - После правок в `src/` или в `requirements.txt` выполните `python3 scripts/bump_code_patch.py`, чтобы поднять **PATCH** и обновить отпечаток (коммитьте `VERSION` и `.version/code_fingerprint` вместе с изменениями).
-- Каждая публикация образа в **Docker Hub** через **`./scripts/docker-hub-publish.sh`** (или `make hub-push` / `./scripts/docker-hub-vps.sh hub-build-push` — тот же сценарий) перед сборкой поднимает **MINOR**; после публикации закоммитьте обновлённый `VERSION`.
+- Каждая публикация образа в **Docker Hub** через **`./scripts/docker-hub-build-push.sh`** (то же: `make hub-push` или `./scripts/docker-hub-publish.sh`) по умолчанию перед сборкой поднимает **MINOR**; после публикации закоммитьте обновлённый `VERSION` (без bump: `NO_BUMP=1` или `--no-bump`). **`DOCKER_USER`** можно задать в `.env` (см. `.env.example`), чтобы не экспортировать его каждый раз.
 
 ## Возможности (MVP)
 
@@ -21,17 +21,11 @@
 
 ## Docker (VPS)
 
-Кратко:
+**Сборка на сервере:** `cp .env.example .env`, секреты, `docker compose up -d --build`.
 
-```bash
-cp .env.example .env   # заполните и chmod 600 .env
-docker compose up -d --build
-docker compose logs -f
-```
+**Docker Hub:** на ПК в `.env` — `DOCKER_USER`, `VPS_USER`, `VPS_HOST` (и при необходимости порт), затем `./scripts/docker-hub-build-push.sh` и `./scripts/vps.sh sync` (первый раз с таймером — `./scripts/vps.sh deploy`). По SSH команды идут через login shell, чтобы находился `docker compose`.
 
-Полный чеклист (файрвол, systemd, бэкапы, **Docker Hub**): см. **[DEPLOY.md](DEPLOY.md)**.
-
-В Compose заданы `STATE_FILE=/data/.state.json` и опционально `TZ`. Чтобы сохранять `.eml` на диск, добавьте в `.env` строку `EXPORT_MAIL_DIR=/data/mail_export`. Логи контейнера ротируются (10 МБ × 3 файла). Именованный том `email2telegram_data` сохраняет состояние между перезапусками.
+Подробности: **[DEPLOY.md](DEPLOY.md)**. В Compose: `STATE_FILE=/data/.state.json`, опционально `TZ` и `EXPORT_MAIL_DIR=/data/mail_export`; логи 10 МБ × 3; том `email2telegram_data`.
 
 ## Требования
 
