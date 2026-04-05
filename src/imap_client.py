@@ -4,6 +4,10 @@ import imaplib
 from contextlib import contextmanager
 from typing import Iterator, List, Tuple
 
+# Some IMAP servers mis-handle UID ranges with `*` in UID SEARCH (e.g. `UID 8:*`
+# matching lower UIDs). Use an explicit upper bound (RFC 3501 UID is 32-bit).
+_IMAP_UID_MAX = 4_294_967_295
+
 
 class ImapClient:
     def __init__(self, host: str, port: int, user: str, password: str, mailbox: str = "INBOX") -> None:
@@ -39,7 +43,8 @@ class ImapClient:
         if last_seen_uid is None:
             criteria = "ALL"
         else:
-            criteria = f"UID {last_seen_uid + 1}:*"
+            lo = last_seen_uid + 1
+            criteria = f"UID {lo}:{_IMAP_UID_MAX}"
 
         status, data = client.uid("SEARCH", None, criteria)
         if status != "OK":
