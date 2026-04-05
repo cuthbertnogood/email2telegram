@@ -11,7 +11,7 @@ The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** publish cont
 1. Sign in at [app.docker.com](https://app.docker.com/) (or [hub.docker.com](https://hub.docker.com/)).
 2. **Repositories** → **Create repository**.
 3. Name: e.g. `email2telegram`, visibility **Private** or **Public**.
-4. You do **not** upload the image in the browser — the site only reserves the name. The image appears after the first **`docker push`** (or GitHub Actions) with that name.
+4. You do **not** upload the image in the browser — the site only reserves the name. The image appears after the first `**docker push`** (or GitHub Actions) with that name.
 
 ### B. Access token (for `docker login` on your PC / CI)
 
@@ -23,11 +23,14 @@ The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** publish cont
 ```bash
 cd /path/to/email2telegram
 docker login -u YOUR_DOCKERHUB_USER
+# Optional smoke test (same Dockerfile as the Hub image): docker build -t email2telegram:local .
 docker build -t YOUR_DOCKERHUB_USER/email2telegram:latest .
 docker push YOUR_DOCKERHUB_USER/email2telegram:latest
 ```
 
 Or: `make hub-push DOCKER_USER=YOUR_DOCKERHUB_USER`.
+
+Or: after `docker login`, `DOCKER_USER=YOUR_DOCKERHUB_USER ./scripts/docker-hub-vps.sh hub-build-push`. UI steps for the Hub repo and PAT: `./scripts/docker-hub-vps.sh hub-checklist`.
 
 After a successful push, the image is visible under **Repositories** on app.docker.com.
 
@@ -39,12 +42,14 @@ Add repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`, then run work
 
 On the server you only need `docker-compose.hub.yml`, `.env`, and Docker — **full git clone is optional**.
 
+From your PC (after `/opt/email2telegram` exists and is owned by your user on the VPS): `./scripts/docker-hub-vps.sh scp-compose YOUR_USER@VPS_HOST` copies `docker-compose.hub.yml` and `deploy/email2telegram.service` into that directory.
+
 ```bash
 mkdir -p /opt/email2telegram && cd /opt/email2telegram
 # copy docker-compose.hub.yml and .env (scp or nano)
 ```
 
-In **`.env`** set among other variables:
+In `**.env**` set among other variables:
 
 ```env
 DOCKER_IMAGE=YOUR_DOCKERHUB_USER/email2telegram:latest
@@ -65,7 +70,7 @@ Or from that directory: `make vps-pull`.
 ## 1. Server
 
 - Ubuntu 22.04/24.04 LTS or similar with SSH.
-- Install [Docker Engine](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/linux/).
+- Install [Docker Engine](https://docs.docker.com/engine/install/) and the [Compose plugin](https://docs.docker.com/compose/install/linux/). Quick reference: `./scripts/docker-hub-vps.sh vps-install-docker`
 
 ## 2. Firewall
 
@@ -133,27 +138,44 @@ docker compose logs -f
 
 Updates:
 
-- **Hub:** `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d`
+- **Hub:** `docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d` — or from your PC: `./scripts/docker-hub-vps.sh vps-up-remote YOUR_USER@VPS_HOST`
 - **Local build:** `git pull && docker compose up -d --build`
 
 ## 6. Auto-start on boot (optional)
 
-Edit `deploy/email2telegram.service` — set `WorkingDirectory` to `/opt/email2telegram` (or your path), ensure `docker compose` path is `/usr/bin/docker` or `which docker`.
+Edit `deploy/email2telegram.service` in the repo — set `WorkingDirectory` to `/opt/email2telegram` (or your path), ensure `docker compose` path is `/usr/bin/docker` or `which docker`.
+
+**Full git clone on the VPS** (paths relative to repo root):
 
 ```bash
 sudo cp deploy/email2telegram.service /etc/systemd/system/
+```
+
+**Minimal Hub layout** (`scp-compose` or manual copy — unit file lies next to compose, not under `deploy/`):
+
+```bash
+sudo cp /opt/email2telegram/email2telegram.service /etc/systemd/system/
+```
+
+Then:
+
+```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now email2telegram.service
 ```
 
+Same steps as a reminder: `./scripts/docker-hub-vps.sh systemd-hints`
+
 ## 7. Operations
 
-| Action        | Command                          |
-|---------------|----------------------------------|
-| Logs          | `docker compose -f docker-compose.hub.yml logs -f` (or default compose file) |
-| Stop          | `docker compose -f docker-compose.hub.yml down`            |
-| State volume  | named `email2telegram_data`      |
-| Backup state  | copy `/var/lib/docker/volumes/...` or use `docker run --rm -v email2telegram_data:/data -v $(pwd):/backup alpine tar czf /backup/data.tgz /data` |
+
+| Action       | Command                                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Logs         | `docker compose -f docker-compose.hub.yml logs -f` (or default compose file)                                                                     |
+| Stop         | `docker compose -f docker-compose.hub.yml down`                                                                                                  |
+| State volume | named `email2telegram_data`                                                                                                                      |
+| Backup state | copy `/var/lib/docker/volumes/...` or use `docker run --rm -v email2telegram_data:/data -v $(pwd):/backup alpine tar czf /backup/data.tgz /data` |
+
 
 ## 8. Secrets
 

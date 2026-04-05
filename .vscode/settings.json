@@ -1,0 +1,5 @@
+{
+    "specstory.autoSave.enabled": true,
+    "specstory.cloudSync.enabled": "ask",
+    "specstory.showDeveloperTools": true
+}
