@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Docker Hub build/push: single [`scripts/host_to_docker_hub.sh`](scripts/host_to_docker_hub.sh) (MINOR bump in bash, `.env` for `DOCKER_USER` / `TAG` / `NO_BUMP`); removed `docker-hub-build-push.sh`, `docker-hub-publish.sh`, and `bump_docker_minor.py`. `make hub-push` and docs updated accordingly.
+- Docs: added [`docs/host-to-docker-hub.md`](docs/host-to-docker-hub.md) (usage for `host_to_docker_hub.sh`); removed redundant [`docs/docker-hub-build-and-vps-plan.md`](docs/docker-hub-build-and-vps-plan.md). [`DEPLOY.md`](DEPLOY.md) and cross-links point to the new guide.
 - Hub deploy path: `vps-update-hub.sh`, `./scripts/vps.sh pull-up`, `make vps-pull`, and `deploy/email2telegram.service` now run `docker compose … up -d --force-recreate` after `pull` so the container is recreated from the new image. `DEPLOY.md` adds version-sync notes (local publish vs CI tag) and VPS verification commands (`/app/VERSION`, OCI label).
 - **VPS from PC:** single `scripts/vps.sh` (`sync`, `pull-up`, `enable-timer`, `deploy`, …) with `VPS_USER` / `VPS_HOST` / `VPS_SSH_PORT` in `.env`; removed `docker-hub-vps.sh` and `vps-sync-files.sh`.
 - **Docs:** shorter `DEPLOY.md`, `docs/docker-hub-build-and-vps-plan.md`, README Docker sections; document VPS SSH `bash -lc` and `VPS_SSH_VERBOSE`.

@@ -23,9 +23,9 @@ TAG ?= latest
 hub-login:
 	@if [ -n "$(DOCKER_USER)" ]; then docker login -u "$(DOCKER_USER)"; else docker login; fi
 
-# Delegates to scripts/docker-hub-build-push.sh (bump_docker_minor.py unless NO_BUMP=1).
+# Delegates to scripts/host_to_docker_hub.sh (MINOR bump in script unless NO_BUMP=1).
 hub-build:
-	DOCKER_USER=$(DOCKER_USER) TAG=$(TAG) ./scripts/docker-hub-build-push.sh
+	DOCKER_USER=$(DOCKER_USER) TAG=$(TAG) ./scripts/host_to_docker_hub.sh
 
 # Pushes are done inside hub-build (buildx --push). Kept as an alias for existing docs.
 hub-push: hub-build

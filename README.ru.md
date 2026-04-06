@@ -7,7 +7,7 @@
 **Версия:** см. файл [`VERSION`](VERSION) в корне репозитория. История изменений: [`CHANGELOG.md`](CHANGELOG.md). Каждое исходящее сообщение в Telegram начинается с версии запущенного сервиса.
 
 - После правок в `src/` или в `requirements.txt` выполните `python3 scripts/bump_code_patch.py`, чтобы поднять **PATCH** и обновить отпечаток (коммитьте `VERSION` и `.version/code_fingerprint` вместе с изменениями).
-- Каждая публикация образа в **Docker Hub** через **`./scripts/docker-hub-build-push.sh`** (то же: `make hub-push` или `./scripts/docker-hub-publish.sh`) по умолчанию перед сборкой поднимает **MINOR**; после публикации закоммитьте обновлённый `VERSION` (без bump: `NO_BUMP=1` или `--no-bump`). **`DOCKER_USER`** можно задать в `.env` (см. `.env.example`), чтобы не экспортировать его каждый раз.
+- Публикация образа в **Docker Hub**: **`./scripts/host_to_docker_hub.sh`** (то же, что `make hub-push`) по умолчанию перед сборкой поднимает **MINOR**; после публикации закоммитьте `VERSION` (без bump: `NO_BUMP=1` или `--no-bump`). **`DOCKER_USER`** — в `.env` (см. `.env.example`). Подробно: **[docs/host-to-docker-hub.md](docs/host-to-docker-hub.md)**.
 
 ## Возможности (MVP)
 
@@ -23,7 +23,7 @@
 
 **Сборка на сервере:** `cp .env.example .env`, секреты, `docker compose up -d --build`.
 
-**Docker Hub:** на ПК в `.env` — `DOCKER_USER`, `VPS_USER`, `VPS_HOST` (и при необходимости порт), затем `./scripts/docker-hub-build-push.sh` и `./scripts/vps.sh sync` (первый раз с таймером — `./scripts/vps.sh deploy`). По SSH команды идут через login shell, чтобы находился `docker compose`.
+**Docker Hub:** на ПК в `.env` — `DOCKER_USER`, `VPS_USER`, `VPS_HOST` (и при необходимости порт), затем `./scripts/host_to_docker_hub.sh` и `./scripts/vps.sh sync` (первый раз с таймером — `./scripts/vps.sh deploy`). По SSH команды идут через login shell, чтобы находился `docker compose`.
 
 Подробности: **[DEPLOY.md](DEPLOY.md)**. В Compose: `STATE_FILE=/data/.state.json`, опционально `TZ` и `EXPORT_MAIL_DIR=/data/mail_export`; логи 10 МБ × 3; том `email2telegram_data`.
 

@@ -2,7 +2,7 @@
 
 The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** expose container ports to the internet.
 
-- **Operational flow (build, Hub, `vps.sh`, CI):** [docs/docker-hub-build-and-vps-plan.md](docs/docker-hub-build-and-vps-plan.md)  
+- **Publish image to Docker Hub:** [docs/host-to-docker-hub.md](docs/host-to-docker-hub.md) (`scripts/host_to_docker_hub.sh`)
 - **What runs where (diagrams):** [docs/docker-vps-architecture.md](docs/docker-vps-architecture.md)
 
 ---
@@ -13,7 +13,7 @@ The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** expose conta
 
 | Variable | Purpose |
 | -------- | ------- |
-| `DOCKER_USER` | Docker Hub login; used by `./scripts/docker-hub-build-push.sh` |
+| `DOCKER_USER` | Docker Hub login; used by `./scripts/host_to_docker_hub.sh` |
 | `VPS_USER`, `VPS_HOST` | SSH target for `./scripts/vps.sh` |
 | `VPS_SSH_PORT` | If SSH is not on 22 |
 | `VPS_REMOTE_DIR` | Remote project dir (default `/opt/email2telegram`) |
@@ -22,14 +22,12 @@ The bot only needs **outbound** HTTPS (IMAP + Telegram). **Do not** expose conta
 
 **Hub (browser):** create repo `email2telegram`, [PAT for `docker login`](https://hub.docker.com/settings/security). Cheatsheet: `./scripts/vps.sh hub-checklist`.
 
-**Build and push** (before build, bumps **MINOR** in `VERSION` unless `NO_BUMP=1` or `--no-bump`; then `linux/amd64` + `linux/arm64` push):
+**Build and push:** see **[docs/host-to-docker-hub.md](docs/host-to-docker-hub.md)** for `docker login`, `.env`, `NO_BUMP`, and tags. Quick path:
 
 ```bash
 docker login -u YOUR_DOCKERHUB_USER
-./scripts/docker-hub-build-push.sh    # or: make hub-push
+./scripts/host_to_docker_hub.sh    # or: make hub-push
 ```
-
-Also: `./scripts/docker-hub-publish.sh` (wrapper). After a bump, **commit `VERSION`**.
 
 **Copy files to VPS** (after `sudo mkdir … && chown` on the server — see below):
 
@@ -69,7 +67,7 @@ Secrets: `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`. Trigger: workflow **Docker Hub
 
 ## New image after a release
 
-1. `docker login` if needed → `./scripts/docker-hub-build-push.sh` → commit **`VERSION`** if it changed.  
+1. `docker login` if needed → `./scripts/host_to_docker_hub.sh` → commit **`VERSION`** if it changed.  
 2. On VPS: wait for the Hub timer (~10 min) or from PC: `./scripts/vps.sh pull-up`.  
 3. Check: `docker compose -f …/docker-compose.hub.yml ps`, `exec … cat /app/VERSION`.
 

@@ -7,7 +7,7 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
 **Version:** see the [`VERSION`](VERSION) file at the repo root. Human-readable history: [`CHANGELOG.md`](CHANGELOG.md). Each Telegram delivery is prefixed with the running service version.
 
 - After changing code under `src/` or `requirements.txt`, run `python3 scripts/bump_code_patch.py` to bump **PATCH** and refresh the fingerprint (commit `VERSION` and `.version/code_fingerprint` with your changes).
-- Each **Docker Hub** publish via **`./scripts/docker-hub-build-push.sh`** (same flow: `make hub-push` or `./scripts/docker-hub-publish.sh`) bumps **MINOR** before the image build by default; commit the updated `VERSION` after publishing (use `NO_BUMP=1` or `--no-bump` to skip). Put **`DOCKER_USER`** in `.env` (see `.env.example`) so you do not need to export it every time.
+- Each **Docker Hub** publish: **`./scripts/host_to_docker_hub.sh`** (same as `make hub-push`) bumps **MINOR** before the image build by default; commit the updated `VERSION` after publishing (use `NO_BUMP=1` or `--no-bump` to skip). Put **`DOCKER_USER`** in `.env` (see `.env.example`). Full guide: **[docs/host-to-docker-hub.md](docs/host-to-docker-hub.md)**.
 
 ## Features (MVP)
 
@@ -23,7 +23,7 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
 
 **Build on the server:** `cp .env.example .env`, fill secrets, `docker compose up -d --build`.
 
-**Docker Hub:** on your PC, set `DOCKER_USER` and `VPS_USER` / `VPS_HOST` in `.env`, then `./scripts/docker-hub-build-push.sh` and `./scripts/vps.sh sync` (or `./scripts/vps.sh deploy` for first-time timer setup). Remote SSH uses a login shell so `docker compose` is found reliably.
+**Docker Hub:** on your PC, set `DOCKER_USER` and `VPS_USER` / `VPS_HOST` in `.env`, then `./scripts/host_to_docker_hub.sh` and `./scripts/vps.sh sync` (or `./scripts/vps.sh deploy` for first-time timer setup). Remote SSH uses a login shell so `docker compose` is found reliably.
 
 Details: **[DEPLOY.md](DEPLOY.md)**. Compose: `STATE_FILE=/data/.state.json`, optional `TZ` and `EXPORT_MAIL_DIR=/data/mail_export`; logs rotated (10 MB × 3); volume `email2telegram_data`.
 
