@@ -23,7 +23,7 @@
 
 **Сборка на сервере:** `cp .env.example .env`, секреты, `docker compose up -d --build`.
 
-**Docker Hub:** на ПК в `.env` — `DOCKER_USER`, `VPS_USER`, `VPS_HOST` (и при необходимости порт), затем `./scripts/host_to_docker_hub.sh` и `./scripts/vps.sh sync` (первый раз с таймером — `./scripts/vps.sh deploy`). По SSH команды идут через login shell, чтобы находился `docker compose`.
+**Docker Hub:** на ПК в `.env` — `DOCKER_USER`, `VPS_USER`, `VPS_HOST` (и при необходимости порт), затем `./scripts/host_to_docker_hub.sh` и `./scripts/host_to_vps.sh sync` (первый раз с таймером — `./scripts/host_to_vps.sh deploy`). По SSH команды идут через login shell, чтобы находился `docker compose`. Гайд: **[docs/host-to-vps.md](docs/host-to-vps.md)**.
 
 Подробности: **[DEPLOY.md](DEPLOY.md)**. В Compose: `STATE_FILE=/data/.state.json`, опционально `TZ` и `EXPORT_MAIL_DIR=/data/mail_export`; логи 10 МБ × 3; том `email2telegram_data`.
 

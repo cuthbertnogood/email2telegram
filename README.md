@@ -23,7 +23,7 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
 
 **Build on the server:** `cp .env.example .env`, fill secrets, `docker compose up -d --build`.
 
-**Docker Hub:** on your PC, set `DOCKER_USER` and `VPS_USER` / `VPS_HOST` in `.env`, then `./scripts/host_to_docker_hub.sh` and `./scripts/vps.sh sync` (or `./scripts/vps.sh deploy` for first-time timer setup). Remote SSH uses a login shell so `docker compose` is found reliably.
+**Docker Hub:** on your PC, set `DOCKER_USER` and `VPS_USER` / `VPS_HOST` in `.env`, then `./scripts/host_to_docker_hub.sh` and `./scripts/host_to_vps.sh sync` (or `./scripts/host_to_vps.sh deploy` for first-time timer setup). Remote SSH uses a login shell so `docker compose` is found reliably. Guide: **[docs/host-to-vps.md](docs/host-to-vps.md)**.
 
 Details: **[DEPLOY.md](DEPLOY.md)**. Compose: `STATE_FILE=/data/.state.json`, optional `TZ` and `EXPORT_MAIL_DIR=/data/mail_export`; logs rotated (10 MB × 3); volume `email2telegram_data`.
 

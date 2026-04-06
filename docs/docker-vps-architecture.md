@@ -87,7 +87,7 @@
 1. **Docker Hub** — на сервере только `docker-compose.hub.yml` + `.env` + скрипты/units при желании; образ тянется по `DOCKER_IMAGE`.
 2. **Сборка на сервере** — полный клон репозитория, `docker compose up -d --build` с [docker-compose.yml](../docker-compose.yml).
 
-Цепочка Hub и скрипты: [docker-hub-build-and-vps-plan.md](docker-hub-build-and-vps-plan.md).
+Публикация образа на Hub: [host-to-docker-hub.md](host-to-docker-hub.md). С ПК на VPS (scp, удалённый compose): [host-to-vps.md](host-to-vps.md). Полный чеклист: [DEPLOY.md](../DEPLOY.md).
 
 ---
 

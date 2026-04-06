@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Canonical: build multi-arch image and push to Docker Hub (buildx --push).
+# Build multi-arch image and push to Docker Hub (buildx --push).
 #
 # Steps (default):
 #   1) bump MINOR in VERSION (skip with NO_BUMP=1 or --no-bump)
@@ -8,20 +8,15 @@
 #
 # Usage (from repo root or any cwd — script cds to root):
 #   docker login -u YOUR_HUB_USER   # PAT as password
-#   ./scripts/docker-hub-build-push.sh
+#   ./scripts/host_to_docker_hub.sh
 #
-# If DOCKER_USER is not set, the script loads repo .env (see DOCKER_USER in .env.example).
-#
-# Env:
-#   DOCKER_USER  (required) Docker Hub username / org, or set in .env
-#   TAG          (optional)  image tag, default: latest
-#   NO_BUMP=1    (optional)  do not run bump_docker_minor.py
+# Configure via repo .env (see .env.example): DOCKER_USER, optional TAG, NO_BUMP.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Load .env for DOCKER_USER (and TAG, etc.). Command-line env wins if already set.
+# Load .env for DOCKER_USER (and TAG, etc.). Value already in shell wins for DOCKER_USER.
 _du_was_set=0
 [[ -n "${DOCKER_USER+x}" ]] && _du_was_set=1
 _saved_docker_user="${DOCKER_USER-}"
@@ -37,31 +32,46 @@ fi
 
 usage() {
   cat <<'EOF'
-docker-hub-build-push.sh — Docker Hub: bump MINOR (optional), build, push.
+host_to_docker_hub.sh — Docker Hub: bump MINOR (optional), build, push.
 
 What it does:
-  1. By default: increment MINOR in VERSION (bump_docker_minor.py).
+  1. By default: increment MINOR in VERSION (in bash).
   2. buildx build for linux/amd64 and linux/arm64.
   3. Push to Docker Hub (same as build; no separate docker push).
 
 Requires: docker login (PAT as password), buildx builder capable of --push.
 
   docker login -u YOUR_HUB_USER
-  ./scripts/docker-hub-build-push.sh
+  ./scripts/host_to_docker_hub.sh
 
   # Or override .env / org account:
-  DOCKER_USER=otherhub ./scripts/docker-hub-build-push.sh
+  DOCKER_USER=otherhub ./scripts/host_to_docker_hub.sh
 
-Optional:
+Optional (shell or .env):
 
-  TAG=mytag ./scripts/docker-hub-build-push.sh
-  NO_BUMP=1 ./scripts/docker-hub-build-push.sh
-  ./scripts/docker-hub-build-push.sh --no-bump
+  TAG=mytag ./scripts/host_to_docker_hub.sh
+  NO_BUMP=1 ./scripts/host_to_docker_hub.sh
+  ./scripts/host_to_docker_hub.sh --no-bump
 
 Put DOCKER_USER=... in .env (see .env.example) to avoid exporting it every time.
 
 Tags pushed: YOUR_HUB_USER/email2telegram:TAG and :GIT_SHORT_SHA (or :local).
 EOF
+}
+
+bump_docker_minor() {
+  local raw major minor patch
+  raw="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+  if [[ ! "$raw" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    echo "error: VERSION must be MAJOR.MINOR.PATCH, got: ${raw}" >&2
+    return 1
+  fi
+  major="${BASH_REMATCH[1]}"
+  minor="${BASH_REMATCH[2]}"
+  patch="${BASH_REMATCH[3]}"
+  minor=$((minor + 1))
+  printf '%s.%s.%s\n' "$major" "$minor" "$patch" > "$ROOT/VERSION"
+  echo "MINOR bumped for Docker Hub build → ${major}.${minor}.${patch}"
 }
 
 NO_BUMP="${NO_BUMP:-}"
@@ -97,7 +107,7 @@ image="${user}/email2telegram:${tag}"
 sha="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo local)"
 
 if [[ -z "$NO_BUMP" || "$NO_BUMP" == "0" ]]; then
-  python3 "$ROOT/scripts/bump_docker_minor.py"
+  bump_docker_minor
 fi
 ver="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 

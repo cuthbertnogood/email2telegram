@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# One entry point for VPS work from your PC: sync files, remote pull/up, timer, hints.
-# Connection defaults from repo .env: VPS_USER, VPS_HOST, VPS_SSH_PORT, VPS_REMOTE_DIR.
+# From your PC: sync deploy files to VPS, remote docker compose pull/up, Hub timer, hints.
+# Loads repo .env for VPS_USER, VPS_HOST, VPS_SSH_PORT, VPS_REMOTE_DIR (see docs/host-to-vps.md).
 #
-# Usage:
-#   ./scripts/vps.sh sync              # scp deploy files (uses .env)
-#   ./scripts/vps.sh pull-up           # docker compose pull && up on VPS
-#   ./scripts/vps.sh enable-timer      # systemd Hub pull timer
-#   ./scripts/vps.sh deploy            # sync + pull-up + enable-timer
-#   ./scripts/vps.sh sync user@host [/other/dir]   # override .env for this run
+# Usage (from repo root or any cwd — script cds to root):
+#   ./scripts/host_to_vps.sh sync              # scp deploy files (uses .env)
+#   ./scripts/host_to_vps.sh pull-up           # docker compose pull && up on VPS
+#   ./scripts/host_to_vps.sh enable-timer      # systemd Hub pull timer
+#   ./scripts/host_to_vps.sh deploy            # sync + pull-up + enable-timer
+#   ./scripts/host_to_vps.sh sync user@host [/other/dir]   # override .env for this run
 #
 # Options before the command: -p PORT  (or VPS_SSH_PORT in .env)
 set -euo pipefail
@@ -110,23 +110,25 @@ resolve_rdir() {
 
 usage() {
   cat <<'EOF'
-vps.sh — sync deploy files to VPS, remote compose pull/up, Hub timer (from your PC).
+host_to_vps.sh — sync deploy files to VPS, remote compose pull/up, Hub timer (from your PC).
 
 Defaults from .env: VPS_USER, VPS_HOST, optional VPS_SSH_PORT, VPS_REMOTE_DIR, VPS_SSH_OPTS, VPS_SSH_VERBOSE.
 Remote docker runs via bash -lc (login PATH). Debug: VPS_SSH_VERBOSE=1.
 
-  ./scripts/vps.sh [-p PORT] sync   [user@host [REMOTE_DIR]]
-  ./scripts/vps.sh [-p PORT] pull-up   [user@host [REMOTE_DIR]]
-  ./scripts/vps.sh [-p PORT] enable-timer   [user@host [REMOTE_DIR]]
-  ./scripts/vps.sh [-p PORT] deploy   [user@host [REMOTE_DIR]]   # sync + pull-up + enable-timer
+  ./scripts/host_to_vps.sh [-p PORT] sync   [user@host [REMOTE_DIR]]
+  ./scripts/host_to_vps.sh [-p PORT] pull-up   [user@host [REMOTE_DIR]]
+  ./scripts/host_to_vps.sh [-p PORT] enable-timer   [user@host [REMOTE_DIR]]
+  ./scripts/host_to_vps.sh [-p PORT] deploy   [user@host [REMOTE_DIR]]   # sync + pull-up + enable-timer
 
-  ./scripts/vps.sh hub-checklist      # Docker Hub browser + PAT reminder
-  ./scripts/vps.sh install-docker     # print Ubuntu Docker install one-liner
-  ./scripts/vps.sh systemd-hints      # optional systemd unit for the stack
+  ./scripts/host_to_vps.sh hub-checklist      # Docker Hub browser + PAT reminder
+  ./scripts/host_to_vps.sh install-docker     # print Ubuntu Docker install one-liner
+  ./scripts/host_to_vps.sh systemd-hints      # optional systemd unit for the stack
 
-Docker Hub image build/push: ./scripts/docker-hub-build-push.sh
+Docker Hub image build/push: ./scripts/host_to_docker_hub.sh
 
-Debug SSH: VPS_SSH_VERBOSE=1 ./scripts/vps.sh pull-up
+Full guide: docs/host-to-vps.md
+
+Debug SSH: VPS_SSH_VERBOSE=1 ./scripts/host_to_vps.sh pull-up
 EOF
 }
 
@@ -174,9 +176,12 @@ Docker Hub (do in browser):
 
 Build and push (bump MINOR by default):
 
-  ./scripts/docker-hub-build-push.sh
+  ./scripts/host_to_docker_hub.sh
 
-Put DOCKER_USER in repo .env (see .env.example), or export it. Wrapper: ./scripts/docker-hub-publish.sh
+Put DOCKER_USER in repo .env (see .env.example), or export it.
+
+Details: docs/host-to-docker-hub.md
+VPS sync / deploy from PC: docs/host-to-vps.md
 EOF
 }
 
@@ -213,7 +218,7 @@ cmd_sync() {
 
   echo "Synced to ${target}:${rdir}/"
   echo "On VPS: .env with DOCKER_IMAGE + secrets; chmod 600 .env; chmod +x ${rdir}/vps-update-hub.sh"
-  echo "Then: ./scripts/vps.sh pull-up   (same .env targets this host)"
+  echo "Then: ./scripts/host_to_vps.sh pull-up   (same .env targets this host)"
 }
 
 cmd_pull_up() {
@@ -272,7 +277,7 @@ On VPS (after files are in ${VPS_REMOTE_DIR:-/opt/email2telegram}):
 
 Or from your PC (after .env on the VPS; sudo may prompt):
 
-  ./scripts/vps.sh enable-timer
+  ./scripts/host_to_vps.sh enable-timer
 
 Manual equivalent (see DEPLOY.md section 7):
 
