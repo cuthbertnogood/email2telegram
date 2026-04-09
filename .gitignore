@@ -1,6 +1,7 @@
 .DS_Store
 .env
 .venv/
+.specstory/
 logs/
 mail_export/
 .verify_state.json
