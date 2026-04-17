@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from email import message_from_bytes
 from email.header import decode_header, make_header
 from email.message import Message
+from html import unescape
 from typing import Dict
 
 
@@ -28,25 +30,51 @@ def _decode_header_value(value: str | None) -> str:
 
 
 def _extract_text_body(message: Message) -> str:
+    html_body = ""
     if message.is_multipart():
         for part in message.walk():
             content_type = part.get_content_type()
             content_disposition = str(part.get("Content-Disposition", "")).lower()
-            if content_type == "text/plain" and "attachment" not in content_disposition:
+            if "attachment" in content_disposition:
+                continue
+            if content_type == "text/plain":
                 charset = part.get_content_charset() or "utf-8"
                 payload = part.get_payload(decode=True) or b""
                 try:
                     return payload.decode(charset, errors="replace")
                 except LookupError:
                     return payload.decode("utf-8", errors="replace")
-        return ""
+            if not html_body and content_type == "text/html":
+                charset = part.get_content_charset() or "utf-8"
+                payload = part.get_payload(decode=True) or b""
+                try:
+                    html_body = payload.decode(charset, errors="replace")
+                except LookupError:
+                    html_body = payload.decode("utf-8", errors="replace")
+        return _html_to_text(html_body) if html_body else ""
 
     charset = message.get_content_charset() or "utf-8"
     payload = message.get_payload(decode=True) or b""
     try:
-        return payload.decode(charset, errors="replace")
+        decoded = payload.decode(charset, errors="replace")
     except LookupError:
-        return payload.decode("utf-8", errors="replace")
+        decoded = payload.decode("utf-8", errors="replace")
+
+    if message.get_content_type() == "text/html":
+        return _html_to_text(decoded)
+    return decoded
+
+
+def _html_to_text(html_body: str) -> str:
+    if not html_body:
+        return ""
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", "", html_body)
+    text = re.sub(r"(?i)<br\s*/?>", "\n", text)
+    text = re.sub(r"(?i)</p\s*>", "\n", text)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = unescape(text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def parse_email(raw_message: bytes) -> Dict[str, str]:

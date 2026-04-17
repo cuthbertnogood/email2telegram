@@ -30,8 +30,8 @@ async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
         await run_delivery_cycle(
             bd["imap_client"],
             bd["state"],
-            bot_token=bd["bot_token"],
             chat_id=bd["chat_id"],
+            bot=context.application.bot,
             export_dir=bd["export_dir"],
             service_version=bd["service_version"],
             allowed_chat_ids=bd["allowed_chat_ids"],
@@ -86,7 +86,6 @@ def main() -> None:
         {
             "imap_client": imap_client,
             "state": state,
-            "bot_token": bot_token,
             "chat_id": chat_id,
             "export_dir": export_dir,
             "allowed_chat_ids": allowed,

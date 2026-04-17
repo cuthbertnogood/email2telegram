@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.2] - 2026-04-17
+
+### Changed
+
+- Delivery reliability: `StateStore` writes are now atomic (`tmp` + `os.replace`) to avoid corrupted state files on abrupt restarts.
+- IMAP polling now fetches messages with `BODY.PEEK[]` and marks `\Seen` in a single UID `STORE` call; connection open/login/select has bounded retry with backoff.
+- Telegram delivery now reuses `application.bot` and retries transient send errors (`RetryAfter`, timeouts, API errors) with backoff.
+- Parser now falls back to HTML-to-text extraction when a message has no `text/plain` part.
+- Telegram chunking uses a conservative safe payload limit for emoji-heavy text to reduce `MESSAGE_TOO_LONG` risk.
+- Reduced log noise for idle polls (`no new messages`) by moving it to `DEBUG`.
+- Added Docker `HEALTHCHECK`.
+- Added minimal unit tests (`parser`, `state`, `message_format`, `pipeline`) and CI workflow (`pytest` on push/PR).
+- Pinned runtime dependencies in `requirements.txt`.
+
 ## [0.7.1] - 2026-04-17
 
 ### Changed

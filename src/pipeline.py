@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
+from telegram import Bot
 
 from imap_client import ImapClient
 from message_format import format_email_plain
@@ -23,8 +24,8 @@ def _write_eml(export_dir: Path, uid: int, raw: bytes) -> None:
 async def run_delivery_cycle(
     client: ImapClient,
     state: StateStore,
-    bot_token: str,
     chat_id: str,
+    bot: Bot,
     export_dir: Optional[Path],
     *,
     service_version: str,
@@ -43,7 +44,7 @@ async def run_delivery_cycle(
             )
         messages = [(u, r) for u, r in messages if u > last_seen]
     if not messages:
-        logging.info("no new messages (last_seen_uid=%s)", last_seen)
+        logging.debug("no new messages (last_seen_uid=%s)", last_seen)
         return
 
     logging.info(
@@ -71,9 +72,9 @@ async def run_delivery_cycle(
                 continue
             formatted = format_email_plain(parsed)
             await send_formatted_text(
-                bot_token=bot_token,
                 chat_id=chat_id,
                 text=formatted,
+                bot=bot,
                 service_version=service_version,
                 allowed_chat_ids=allowed_chat_ids,
             )
