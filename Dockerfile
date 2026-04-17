@@ -14,6 +14,7 @@ COPY src/ ./src/
 
 ARG APP_VERSION=unknown
 LABEL org.opencontainers.image.version="${APP_VERSION}"
+ENV APP_VERSION="${APP_VERSION}"
 RUN chown -R appuser:appuser /app
 
 USER appuser

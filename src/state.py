@@ -42,6 +42,22 @@ class StateStore:
         data["last_seen_uid"] = int(uid)
         self._save(data)
 
+    def get_last_service_version(self) -> Optional[str]:
+        data = self._load()
+        raw = data.get("last_service_version")
+        if raw is None:
+            return None
+        value = str(raw).strip()
+        return value or None
+
+    def set_last_service_version(self, version: str) -> None:
+        value = (version or "").strip()
+        if not value:
+            return
+        data = self._load()
+        data["last_service_version"] = value
+        self._save(data)
+
     def has_message_id(self, message_id: str) -> bool:
         mid = (message_id or "").strip()
         if not mid:

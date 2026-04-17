@@ -1,4 +1,4 @@
-.PHONY: up down logs build pull hub-login hub-build hub-push vps-pull gh-push
+.PHONY: up down logs build pull hub-login hub-build hub-push vps-pull gh-push release
 
 # Local dev (build from Dockerfile)
 up:
@@ -37,3 +37,7 @@ vps-pull:
 # One-command git add/commit/push to GitHub (optional MSG=... AUTO_BUMP=1).
 gh-push:
 	AUTO_BUMP=$(AUTO_BUMP) ./scripts/host_to_github.sh $(if $(MSG),-m "$(MSG)",)
+
+# One-shot release from PC: tests + Hub push + VPS sync/pull-up
+release:
+	./scripts/release.sh $(RELEASE_ARGS)

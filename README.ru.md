@@ -2,115 +2,39 @@
 
 [English](README.md) | Русский
 
-Простой мост: **подключение почтового ящика Yandex** по IMAP, опрос новых писем и пересылка текста в чат Telegram. (Другие IMAP-серверы подойдут, если задать `IMAP_HOST` вручную.)
+Мост для доставки обновлений из почты Yandex по IMAP в Telegram. Приложение опрашивает IMAP, форматирует текст, отправляет его в Telegram и хранит состояние доставки.
 
-**Версия:** см. файл [`VERSION`](VERSION) в корне репозитория. История изменений: [`CHANGELOG.md`](CHANGELOG.md). Каждое исходящее сообщение в Telegram начинается с версии запущенного сервиса.
+Источник версии: [`VERSION`](VERSION). История релизов: [`CHANGELOG.md`](CHANGELOG.md).
 
-- После правок в `src/` или в `requirements.txt` выполните `python3 scripts/bump_code_patch.py`, чтобы поднять **PATCH** и обновить отпечаток (коммитьте `VERSION` и `.version/code_fingerprint` вместе с изменениями).
-- Публикация образа в **Docker Hub**: **`./scripts/host_to_docker_hub.sh`** (то же, что `make hub-push`) по умолчанию перед сборкой поднимает **MINOR**; после публикации закоммитьте `VERSION` (без bump: `NO_BUMP=1` или `--no-bump`). **`DOCKER_USER`** — в `.env` (см. `.env.example`). Подробно: **[docs/host-to-docker-hub.md](docs/host-to-docker-hub.md)**.
+## Быстрый старт (3 команды)
 
-## Возможности (MVP)
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && cp .env.example .env
+python src/main.py
+```
 
-- Подключение к ящику **Yandex** по IMAP (`imap.yandex.com` / `imap.yandex.ru`).
-- **Один конвейер:** забрать новые письма → опционально сохранить как `.eml` → отправить **весь текст письма** в Telegram (при превышении лимита Telegram — несколькими сообщениями) → пометить как **прочитанные** на сервере → обновить `last_seen_uid`.
-- Опрос IMAP каждые N секунд.
-- Без фильтров (все новые письма из выбранной папки).
-- Форматирование текста для Telegram — в `src/message_format.py` (позже можно сменить, например на Markdown).
-- **Список разрешённых чатов:** `TELEGRAM_ALLOWED_CHAT_IDS` — почта уходит только в `TELEGRAM_CHAT_ID`, если он входит в список; команда `/start` обрабатывается только для чатов из списка (остальные пользователи не получают ответов).
-- Хранение `last_seen_uid` в файле состояния, чтобы после перезапуска старые письма не пересылались повторно.
+Перед запуском задайте в `.env`: `IMAP_USER`, `IMAP_PASS`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_CHAT_IDS`.
 
-## Docker (VPS)
+## Инструкции для пользователя
 
-**Сборка на сервере:** `cp .env.example .env`, секреты, `docker compose up -d --build`.
+- Индекс: [`docs/user/README.md`](docs/user/README.md)
+- Установка: [`docs/user/quickstart.md`](docs/user/quickstart.md)
+- Yandex IMAP: [`docs/user/yandex-imap.md`](docs/user/yandex-imap.md)
+- Telegram: [`docs/user/telegram-bot.md`](docs/user/telegram-bot.md)
+- Деплой: [`docs/user/deploy.md`](docs/user/deploy.md)
+- Переменные окружения: [`docs/user/env-reference.md`](docs/user/env-reference.md)
+- Диагностика: [`docs/user/troubleshooting.md`](docs/user/troubleshooting.md)
 
-**Docker Hub:** на ПК в `.env` — `DOCKER_USER`, `VPS_USER`, `VPS_HOST` (и при необходимости порт), затем `./scripts/host_to_docker_hub.sh` и `./scripts/host_to_vps.sh sync` (первый раз с таймером — `./scripts/host_to_vps.sh deploy`). По SSH команды идут через login shell, чтобы находился `docker compose`. Гайд: **[docs/host-to-vps.md](docs/host-to-vps.md)**.
+## Документация проекта
 
-Подробности: **[DEPLOY.md](DEPLOY.md)**. В Compose: `STATE_FILE=/data/.state.json`, опционально `TZ` и `EXPORT_MAIL_DIR=/data/mail_export`; логи 10 МБ × 3; том `email2telegram_data`.
+- Индекс: [`docs/dev/README.md`](docs/dev/README.md)
+- Релизный конвейер: [`docs/dev/release-pipeline.md`](docs/dev/release-pipeline.md)
+- Публикация образа: [`docs/dev/publish-to-hub.md`](docs/dev/publish-to-hub.md)
+- Выкатка на VPS: [`docs/dev/deploy-to-vps.md`](docs/dev/deploy-to-vps.md)
+- Архитектура: [`docs/dev/architecture.md`](docs/dev/architecture.md)
+- Версионирование: [`docs/dev/versioning.md`](docs/dev/versioning.md)
+- CI: [`docs/dev/ci.md`](docs/dev/ci.md)
+- Cursor skills: [`docs/dev/cursor-skills.md`](docs/dev/cursor-skills.md)
 
-## Требования
-
-- Python 3.12+
-- Учётные данные Yandex Mail (или совместимого IMAP)
-- Токен Telegram-бота и ID чата
-
-## Установка и запуск
-
-1. Зависимости:
-
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. Файл окружения:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Скопируйте `.env.example` в `.env` и задайте **`IMAP_USER`** / **`IMAP_PASS`**, **`TELEGRAM_BOT_TOKEN`**, **`TELEGRAM_CHAT_ID`** и **`TELEGRAM_ALLOWED_CHAT_IDS`** (в личке с ботом обычно тот же числовой id, что и `TELEGRAM_CHAT_ID`; несколько id — через запятую).
-
-### Yandex Mail (IMAP)
-
-- Откройте [Yandex ID → Безопасность](https://id.yandex.ru/security) для того же аккаунта, что и почта.
-- Создайте **пароль для внешнего приложения** («Пароли приложений» / «Пароль для приложения»). Укажите его в **`IMAP_PASS`**.
-- **`IMAP_USER`**: полный адрес — `name@yandex.ru`, `name@yandex.com`, `name@ya.ru` или домен на Yandex 360.
-- **`IMAP_HOST=imap.yandex.com`**, **`IMAP_PORT=993`**. Если вход не проходит, попробуйте **`imap.yandex.ru`**.
-- В настройках почты Yandex включите доступ для **почтовых клиентов** / IMAP, если такая опция есть.
-
-4. **Проверка IMAP (без Telegram):**
-
-   ```bash
-   python src/imap_probe.py
-   ```
-
-   ```bash
-   # или с записью вывода в файл для шаринга/отладки:
-   ./scripts/run-with-log.sh python src/imap_probe.py   # -> logs/last-run.log
-   ```
-
-   Если письма в другой папке (не `INBOX`), выведите список папок и задайте `IMAP_MAILBOX` в `.env`:
-
-   ```bash
-   python src/imap_probe.py --list-folders
-   ```
-
-   Опционально: просмотр нескольких последних писем — `python src/imap_probe.py --last 5`.
-
-5. Полный мост (нужны переменные Telegram в `.env`):
-
-   ```bash
-   python src/main.py
-   ```
-
-### Если видите `AUTHENTICATIONFAILED` / неверные учётные данные
-
-Сервер отклонил `IMAP_USER` / `IMAP_PASS`. Для Yandex проверьте:
-
-- **Пароль приложения**: при двухфакторной аутентификации нужен [пароль для приложения](https://yandex.ru/support/id/authorization/app-passwords.html), а не пароль от входа в браузере.
-- **Полный логин**: `IMAP_USER` — целиком адрес электронной почты.
-- **Хост**: `imap.yandex.com` или `imap.yandex.ru`.
-- **`.env`**: без лишних пробелов; кавычки — только если в значении есть пробелы.
-- **venv**: после `source .venv/bin/activate` команда `which python` должна указывать внутрь `.venv/`. Иначе пересоздайте окружение: `rm -rf .venv && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`.
-
-## Переменные окружения
-
-- `IMAP_HOST` (обязательно)
-- `IMAP_PORT` (по умолчанию `993`)
-- `IMAP_USER` (обязательно)
-- `IMAP_PASS` (обязательно)
-- `IMAP_MAILBOX` (по умолчанию `INBOX`)
-- `POLL_INTERVAL_SECONDS` (по умолчанию `45`)
-- `TELEGRAM_BOT_TOKEN` (обязательно)
-- `TELEGRAM_ALLOWED_CHAT_IDS` (обязательно) — список ID чатов, которым разрешена доставка почты и `/start`; должен включать `TELEGRAM_CHAT_ID`.
-- `TELEGRAM_CHAT_ID` (обязательно) — чат, куда пересылается почта (должен быть в списке разрешённых).
-- `EXPORT_MAIL_DIR` (опционально) — если задано, каждое доставленное письмо также пишется как `{uid}.eml` в этот каталог.
-- `STATE_FILE` (опционально, по умолчанию `.state.json`) — путь к файлу курсора UID; в Docker используйте `/data/.state.json`.
-
-## Ручная проверка
-
-1. Отправьте тестовое письмо на настроенный ящик.
-2. Проверьте Telegram: каждое сообщение начинается с `[email2telegram v…]`; далее заголовки и тело (длинное тело может прийти частями с номерами `1/n`).
-3. Перезапустите сервис и убедитесь, что уже пересланные письма не отправляются снова.
-4. Отправьте письмо с темой/телом в UTF-8 и убедитесь, что текст декодируется корректно.
+<!-- SYNC_EN_SHA256: 215ffa6a8a606c2e37fb383b551dc89a48c3e2b659953b2ceabbb26758520950 -->

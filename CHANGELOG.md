@@ -4,7 +4,28 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Structured documentation split by audience: `docs/user/*` for operators and `docs/dev/*` for project/release maintenance.
+- README sync automation: `scripts/sync_readme_ru.py` with `--translate` and `--check`, plus marker hash validation in `README.ru.md`.
+- Git hook tooling: `.githooks/pre-commit` and `scripts/install_git_hooks.sh` to enforce README sync locally.
+- GitHub Actions workflow `.github/workflows/readme-sync.yml` to enforce README EN/RU sync on push/PR.
+
+### Changed
+
+- Root `README.md` and `README.ru.md` reduced to concise entry points with links to user/project docs.
+- `DEPLOY.md` converted to a slim pointer to dedicated user/dev deployment docs.
+- `scripts/release.sh` now performs README sync check before the test/build/deploy pipeline.
+
 ## [0.8.2] - 2026-04-17
+
+### Added
+
+- Startup notification in Telegram when container starts with a new app version on the same `/data` volume (`last_service_version` persisted in state).
+- Unified release entrypoint: `scripts/release.sh` (tests -> Docker Hub push -> VPS sync -> remote pull/recreate in one command).
+- `scripts/release.sh` now pushes project changes to GitHub by default after successful VPS deploy (disable with `--no-push-github`).
 
 ### Changed
 
@@ -15,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Telegram chunking uses a conservative safe payload limit for emoji-heavy text to reduce `MESSAGE_TOO_LONG` risk.
 - Reduced log noise for idle polls (`no new messages`) by moving it to `DEBUG`.
 - Added Docker `HEALTHCHECK`.
+- Hub update script now notifies Telegram on pull/recreate failures and reports digest changes before container recreate.
 - Added minimal unit tests (`parser`, `state`, `message_format`, `pipeline`) and CI workflow (`pytest` on push/PR).
 - Pinned runtime dependencies in `requirements.txt`.
 

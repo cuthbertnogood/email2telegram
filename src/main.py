@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timezone
 import logging
 import os
+import platform
+import socket
 
 from dotenv import load_dotenv
 from telegram.ext import Application, CommandHandler, ContextTypes, filters
@@ -10,6 +14,7 @@ from allowlist import parse_allowed_chat_ids
 from imap_client import ImapClient
 from pipeline import load_export_dir_from_env, run_delivery_cycle
 from state import StateStore
+from telegram_client import send_formatted_text
 from version import get_version
 
 
@@ -48,6 +53,70 @@ async def _cmd_start(update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
 
 
+def _build_startup_message(
+    *,
+    previous_version: str | None,
+    current_version: str,
+    startup_iso: str,
+    hostname: str,
+    python_version: str,
+    app_version: str,
+    poll_interval: float,
+    state_path: str,
+    export_dir: str,
+) -> str:
+    if previous_version is None:
+        version_line = f"Версия: первый запуск на этом томе -> v{current_version}"
+    else:
+        version_line = f"Версия: v{previous_version} -> v{current_version}"
+    return "\n".join(
+        [
+            "Обновление образа",
+            version_line,
+            f"Время: {startup_iso}",
+            f"Host: {hostname}",
+            f"Python: {python_version}",
+            f"APP_VERSION (OCI label): {app_version or '-'}",
+            f"Poll: {poll_interval}s",
+            f"State: {state_path}",
+            f"Export: {export_dir}",
+        ]
+    )
+
+
+async def _notify_startup(application: Application) -> None:
+    bd = application.bot_data
+    state = bd["state"]
+    current_version = bd["service_version"]
+    previous_version = await asyncio.to_thread(state.get_last_service_version)
+    if previous_version == current_version:
+        return
+
+    message = _build_startup_message(
+        previous_version=previous_version,
+        current_version=current_version,
+        startup_iso=bd["startup_iso"],
+        hostname=bd["hostname"],
+        python_version=bd["python_version"],
+        app_version=bd["app_version"],
+        poll_interval=bd["poll_interval"],
+        state_path=bd["state_path"],
+        export_dir=bd["export_dir_text"],
+    )
+    try:
+        await send_formatted_text(
+            bd["chat_id"],
+            message,
+            bot=application.bot,
+            service_version=current_version,
+            allowed_chat_ids=bd["allowed_chat_ids"],
+        )
+        await asyncio.to_thread(state.set_last_service_version, current_version)
+        logging.info("Startup update notice sent: %s -> %s", previous_version, current_version)
+    except Exception:
+        logging.exception("Failed to send startup update notice")
+
+
 def main() -> None:
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -69,6 +138,11 @@ def main() -> None:
 
     export_dir = load_export_dir_from_env()
     state_path = _state_path()
+    startup_iso = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+    hostname = socket.gethostname()
+    python_version = platform.python_version()
+    app_version = os.getenv("APP_VERSION", "").strip()
+    export_dir_text = str(export_dir.resolve()) if export_dir else "-"
 
     imap_client = ImapClient(
         host=imap_host,
@@ -80,7 +154,7 @@ def main() -> None:
     state = StateStore(path=state_path)
     service_version = get_version()
 
-    application = Application.builder().token(bot_token).build()
+    application = Application.builder().token(bot_token).post_init(_notify_startup).build()
 
     application.bot_data.update(
         {
@@ -90,6 +164,13 @@ def main() -> None:
             "export_dir": export_dir,
             "allowed_chat_ids": allowed,
             "service_version": service_version,
+            "poll_interval": poll_interval,
+            "state_path": state_path,
+            "startup_iso": startup_iso,
+            "hostname": hostname,
+            "python_version": python_version,
+            "app_version": app_version,
+            "export_dir_text": export_dir_text,
         }
     )
 
