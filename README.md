@@ -16,7 +16,7 @@ Simple bridge: **connect your Yandex Mail mailbox** over IMAP, poll for new mess
 - IMAP polling every N seconds.
 - No filters (all new mail in the chosen folder).
 - Telegram text formatting lives in `src/message_format.py` (easy to change later, e.g. Markdown).
-- **Allowlist:** `TELEGRAM_ALLOWED_CHAT_IDS` — почта уходит только в `TELEGRAM_CHAT_ID`, если он входит в список; команда `/start` обрабатывается только для чатов из списка (остальные пользователи не получают ответов).
+- **Allowlist:** `TELEGRAM_ALLOWED_CHAT_IDS` — mail is forwarded only to `TELEGRAM_CHAT_ID` if it is included in the list; `/start` is handled only for chats in the allowlist (all other users get no reply).
 - Stores `last_seen_uid` in a state file so restarts do not resend old mail.
 
 ## Docker (VPS)
@@ -63,6 +63,11 @@ Details: **[DEPLOY.md](DEPLOY.md)**. Compose: `STATE_FILE=/data/.state.json`, op
 
    ```bash
    python src/imap_probe.py
+   ```
+
+   ```bash
+   # or mirror output to a file for sharing / debugging:
+   ./scripts/run-with-log.sh python src/imap_probe.py   # -> logs/last-run.log
    ```
 
    If mail is in another folder (not `INBOX`), list folders and set `IMAP_MAILBOX` in `.env`:

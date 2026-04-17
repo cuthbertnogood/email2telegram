@@ -1,58 +1,19 @@
 ---
-description: Базовый контекст репозитория email2telegram и рабочие команды
+description: Базовый контекст репозитория email2telegram
 alwaysApply: true
 ---
 
-##BEGIN Рекомендации GROK 
-# Core Rules
+# email2telegram
 
-## Общие принципы работы
-- Будь максимально точным и конкретным
-- Всегда анализируй существующий код перед предложением изменений
-- Предпочитай читаемость и поддерживаемость кода
-- Следуй принципу "явное лучше неявного"
-- После завершения задачи предлагай запустить тесты
+Мост IMAP -> Telegram (MVP): опрос почты, опционально сохранение `.eml`, отправка текста в Telegram.
 
-## Формат Plan Mode
-- Summary
-- Current Analysis
-- Proposed Solution
-- Files to modify/create
-- Step-by-step plan
-- Edge cases
-- Testing recommendations
-- Questions to user
-###END Рекомендации GROK
-
-
-# Ядро: email2telegram
-
-## Назначение
-
-Мост **IMAP → Telegram** (MVP): опрос почты, опционально сохранение `.eml`, отправка текста в Telegram. Точка входа: `src/main.py`. Конфигурация: `.env` (шаблон — `.env.example`).
-
-## Стек и пути
-
-- **Python:** 3.12+
-- **Код:** `src/`
-- **Логи команд:** `./scripts/run-with-log.sh …` → `logs/last-run.log`
-- **Экспорт писем (если задан в env):** каталог с `.eml` (например `mail_export/`)
-
-## Команды (локально)
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python src/imap_probe.py          # IMAP без Telegram
-python src/main.py                # полный мост
-```
-
-Детали и Docker: `README.md`, деплой: `DEPLOY.md`.
+- Python 3.12+, код в `src/`
+- Точка входа: `python src/main.py` (из корня; импорты внутри `src/` — без префикса `src.`)
+- IMAP probe без Telegram: `python src/imap_probe.py`
+- Конфигурация: `.env` (шаблон — `.env.example`)
+- Логи: `./scripts/run-with-log.sh …` -> `logs/last-run.log`
+- Детали: `README.md`, деплой: `DEPLOY.md`
 
 ## Секреты
 
-Не коммитить `.env`. Токены и пароли — только через переменные окружения / локальный `.env`.
-
-## Другие правила Cursor
-
-- Вывод терминала для агента: `share-terminal-output.mdc`
+Не коммитить `.env`. Пароли и токены — только через env/локальный `.env`.

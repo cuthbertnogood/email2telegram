@@ -1,6 +1,6 @@
 # From your PC to the VPS (Docker Hub stack)
 
-This guide covers `**scripts/host_to_vps.sh**`: copy `docker-compose.hub.yml` and `deploy/*` helpers to the server over **SSH/scp**, optionally run `**docker compose pull`** / `**up**` remotely, and enable the **systemd Hub pull timer**.
+This guide covers `**scripts/host_to_vps.sh**`: copy `docker-compose.hub.yml` and `deploy/*` helpers to the server over **SSH/scp**, optionally run `**docker compose pull`** / `**up`** remotely, and enable the **systemd Hub pull timer**.
 
 Pair with **[host-to-docker-hub.md](host-to-docker-hub.md)** to publish the image, then **[DEPLOY.md](../DEPLOY.md)** for the full VPS checklist.
 

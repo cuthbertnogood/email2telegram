@@ -7,3 +7,6 @@ mail_export/
 .state.json
 **/__pycache__/
 *.pyc
+.specstory/
+.cursor/plans/
+

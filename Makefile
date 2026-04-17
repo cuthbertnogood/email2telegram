@@ -1,4 +1,4 @@
-.PHONY: up down logs build pull hub-login hub-build hub-push vps-pull
+.PHONY: up down logs build pull hub-login hub-build hub-push vps-pull gh-push
 
 # Local dev (build from Dockerfile)
 up:
@@ -33,3 +33,7 @@ hub-push: hub-build
 # On VPS with docker-compose.hub.yml + DOCKER_IMAGE in .env
 vps-pull:
 	docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d --force-recreate
+
+# One-command git add/commit/push to GitHub (optional MSG=... AUTO_BUMP=1).
+gh-push:
+	AUTO_BUMP=$(AUTO_BUMP) ./scripts/host_to_github.sh $(if $(MSG),-m "$(MSG)",)

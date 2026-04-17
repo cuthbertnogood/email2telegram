@@ -3,28 +3,7 @@ description: Логирование в email2telegram (stdlib logging, без у
 globs: src/**/*.py
 alwaysApply: false
 ---
-## BEGIN GROK
-# Logging Rules (structlog)
-
-## Основное правило
-- Используй **только** structlog для логирования
-- Запрещено использовать print() в любом виде
-
-## Конфигурация
-- structlog должен быть настроен с contextvars
-- В продакшене используй JSONRenderer
-- В разработке — ConsoleRenderer с цветами
-
-## Использование
-- Добавляй контекст (request_id, user_id, task_id и т.д.)
-- Используй понятные event names (например: "user_login", "order_processed")
-- Логируй важные параметры, но не чувствительные данные
-
-##END GROK
-
 # Логирование: email2telegram
-
-Правило для правок в `src/`, где затрагиваются сообщения в лог. Общий контекст — `01-core.mdc`; базовые соглашения по Python — `02-python.mdc`.
 
 ## Где настраивать
 
@@ -49,4 +28,4 @@ alwaysApply: false
 
 ## Как смотреть логи при отладке с агентом
 
-- Локальный прогон с записью в файл: `./scripts/run-with-log.sh python src/main.py` (или другой скрипт) → `logs/last-run.log`; подробнее — `share-terminal-output.mdc`.
+- Локальный прогон с записью в файл: `./scripts/run-with-log.sh python src/main.py` (или другой скрипт) → `logs/last-run.log`.

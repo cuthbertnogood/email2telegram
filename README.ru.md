@@ -65,6 +65,11 @@
    python src/imap_probe.py
    ```
 
+   ```bash
+   # или с записью вывода в файл для шаринга/отладки:
+   ./scripts/run-with-log.sh python src/imap_probe.py   # -> logs/last-run.log
+   ```
+
    Если письма в другой папке (не `INBOX`), выведите список папок и задайте `IMAP_MAILBOX` в `.env`:
 
    ```bash
