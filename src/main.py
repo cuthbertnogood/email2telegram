@@ -145,6 +145,15 @@ def main() -> None:
     imap_mailbox = os.getenv("IMAP_MAILBOX", "INBOX")
     poll_interval = float(os.getenv("POLL_INTERVAL_SECONDS", "45"))
 
+    heartbeat_interval = float(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "900"))
+    heartbeat_minute_raw = os.getenv("HEARTBEAT_MINUTE", "45")
+    try:
+        heartbeat_minute = int(heartbeat_minute_raw, 10)
+    except ValueError as exc:
+        raise RuntimeError("HEARTBEAT_MINUTE must be an integer 0-59") from exc
+    if not 0 <= heartbeat_minute <= 59:
+        raise RuntimeError("HEARTBEAT_MINUTE must be between 0 and 59 inclusive")
+
     bot_token = _required_env("TELEGRAM_BOT_TOKEN")
     chat_id = _required_env("TELEGRAM_CHAT_ID")
     allowed = parse_allowed_chat_ids(_required_env("TELEGRAM_ALLOWED_CHAT_IDS"))
@@ -199,22 +208,27 @@ def main() -> None:
         raise RuntimeError("JobQueue unavailable; pip install 'python-telegram-bot[job-queue]'")
     jq.run_repeating(_poll_imap, interval=poll_interval, first=5.0)
 
-    now_local = datetime.now(timezone.utc).astimezone()
-    next_mark = now_local.replace(minute=45, second=0, microsecond=0)
-    if next_mark <= now_local:
-        next_mark += timedelta(hours=1)
-    heartbeat_first = (next_mark - now_local).total_seconds()
-    jq.run_repeating(
-        _job_heartbeat,
-        interval=3600,
-        first=heartbeat_first,
-        name="heartbeat",
-    )
-    logging.info(
-        "heartbeat scheduled: first in %.1fs at %s",
-        heartbeat_first,
-        next_mark.isoformat(timespec="seconds"),
-    )
+    if heartbeat_interval > 0:
+        now_local = datetime.now(timezone.utc).astimezone()
+        next_mark = now_local.replace(minute=heartbeat_minute, second=0, microsecond=0)
+        if next_mark <= now_local:
+            next_mark += timedelta(hours=1)
+        heartbeat_first = (next_mark - now_local).total_seconds()
+        jq.run_repeating(
+            _job_heartbeat,
+            interval=heartbeat_interval,
+            first=heartbeat_first,
+            name="heartbeat",
+        )
+        logging.info(
+            "heartbeat scheduled: interval=%ss minute=%s first in %.1fs at %s",
+            heartbeat_interval,
+            heartbeat_minute,
+            heartbeat_first,
+            next_mark.isoformat(timespec="seconds"),
+        )
+    else:
+        logging.info("heartbeat disabled (HEARTBEAT_INTERVAL_SECONDS <= 0)")
 
     logging.info(
         "email2telegram v%s started | poll=%ss | allowlist=%s | export=%s | state=%s",

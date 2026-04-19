@@ -14,6 +14,8 @@
 - `IMAP_PORT` (default `993`)
 - `IMAP_MAILBOX` (default `INBOX`)
 - `POLL_INTERVAL_SECONDS` (default `45`)
+- `HEARTBEAT_INTERVAL_SECONDS` (default `900`; use `0` to disable the heartbeat job)
+- `HEARTBEAT_MINUTE` (default `45`): minute-of-hour (0–59) for the first heartbeat tick, in the process timezone
 - `EXPORT_MAIL_DIR` (saves `{uid}.eml`)
 - `STATE_FILE` (default `.state.json`; in Docker use `/data/.state.json`)
 - `TZ` (timezone for container logs)

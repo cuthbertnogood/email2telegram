@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Heartbeat: every hour at XX:45 the bot sends a monotonically increasing counter (starts at 0); value persisted in state file (`heartbeat_counter`).
+- Heartbeat: periodic Telegram ping with monotonically increasing counter (starts at 0); persisted in state (`heartbeat_counter`). Defaults: 15-minute interval, first tick aligned to minute `:45` (`HEARTBEAT_INTERVAL_SECONDS`, `HEARTBEAT_MINUTE` in `.env`; `0` interval disables).
 - Structured documentation split by audience: `docs/user/*` for operators and `docs/dev/*` for project/release maintenance.
 - README sync automation: `scripts/sync_readme_ru.py` with `--translate` and `--check`, plus marker hash validation in `README.ru.md`.
 - Git hook tooling: `.githooks/pre-commit` and `scripts/install_git_hooks.sh` to enforce README sync locally.
