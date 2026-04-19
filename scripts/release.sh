@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-shot release from PC:
-#   test -> Docker Hub build/push -> VPS sync -> VPS pull/up
+#   (auto-commit if git dirty) -> test -> Docker Hub build/push -> VPS sync -> VPS pull/up
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,11 +13,14 @@ release.sh - one command release: tests, Docker Hub push, VPS deploy, GitHub pus
 Usage:
   ./scripts/release.sh [options] [user@host [REMOTE_DIR]]
 
+If the git working tree is dirty, all changes are staged (git add -A) and committed
+before the pipeline runs, unless --allow-dirty is set.
+
 Options:
   --no-bump       Do not bump VERSION in host_to_docker_hub.sh (sets NO_BUMP=1)
   --skip-security Skip security scan script before release checks
   --skip-tests    Skip python3 -m pytest -q
-  --allow-dirty   Allow dirty git working tree
+  --allow-dirty   Allow dirty git working tree (skip auto-commit)
   --enable-timer  Also run host_to_vps.sh enable-timer after pull-up
   --no-push-github  Skip host_to_github.sh at the end (default is push)
   --tag TAG       Override TAG for host_to_docker_hub.sh
@@ -28,6 +31,8 @@ Examples:
   ./scripts/release.sh --no-bump
   ./scripts/release.sh --skip-tests --enable-timer
   ./scripts/release.sh deploy@203.0.113.10 /opt/email2telegram
+
+Env (from .env): optional VPS_POST_SYNC_SLEEP=seconds between VPS sync and pull-up if SSH rate-limits connections.
 EOF
 }
 
@@ -127,10 +132,18 @@ if [[ -z "$TARGET" && ( -z "${VPS_USER:-}" || -z "${VPS_HOST:-}" ) ]]; then
   exit 1
 fi
 
-if [[ "$ALLOW_DIRTY" -ne 1 ]]; then
-  if [[ -n "$(git status --porcelain)" ]]; then
-    echo "error: git working tree is dirty (use --allow-dirty to override)" >&2
-    exit 1
+if [[ -n "$(git status --porcelain)" ]]; then
+  if [[ "$ALLOW_DIRTY" -eq 1 ]]; then
+    :
+  else
+    echo "Git working tree is dirty; staging all changes and committing..."
+    git add -A
+    if git diff --cached --quiet; then
+      echo "error: git reports a dirty tree but nothing was staged (check .gitignore and skip-worktree)" >&2
+      exit 1
+    fi
+    ver_prep="$(tr -d '[:space:]' < "$ROOT/VERSION" 2>/dev/null || echo '?')"
+    git commit -m "chore(release): pending changes before release (${ver_prep})"
   fi
 fi
 
@@ -165,6 +178,11 @@ if [[ -n "$TARGET" ]]; then
   ./scripts/host_to_vps.sh sync "$TARGET" "$REMOTE_DIR"
 else
   ./scripts/host_to_vps.sh sync
+fi
+
+if [[ -n "${VPS_POST_SYNC_SLEEP:-}" && "${VPS_POST_SYNC_SLEEP}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "[5b/8] VPS_POST_SYNC_SLEEP=${VPS_POST_SYNC_SLEEP}s before pull-up..."
+  sleep "$VPS_POST_SYNC_SLEEP"
 fi
 
 echo "[6/8] Pulling and recreating container on VPS..."

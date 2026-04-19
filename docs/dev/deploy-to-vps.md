@@ -25,6 +25,7 @@ Optional:
 - `VPS_SSH_OPTS`
 - `VPS_SSH_VERBOSE=1`
 - `VPS_PULL_UP_RETRIES` — max SSH attempts for `pull-up` / `deploy` (default `3`; transient “connection closed” retries with 5s, then 10s, … sleep between tries).
+- `VPS_POST_SYNC_SLEEP` — seconds to wait after VPS file sync before `pull-up` in **`./scripts/release.sh`** only (unset = no pause). Use if your host rate-limits bursts of SSH connections.
 
 ## Examples
 
@@ -53,4 +54,4 @@ VPS_SSH_VERBOSE=1 ./scripts/host_to_vps.sh pull-up
 ssh -p YOUR_PORT YOUR_USER@YOUR_HOST 'echo shell_ok'
 ```
 
-`host_to_vps.sh` adds **ServerAlive** options by default to reduce idle disconnects during long pulls. **`pull-up` retries** the remote SSH up to `VPS_PULL_UP_RETRIES` times (default 3) with increasing sleep between attempts when the session drops before success.
+`host_to_vps.sh` adds **ServerAlive** options by default to reduce idle disconnects during long pulls. **`pull-up` retries** the remote SSH up to `VPS_PULL_UP_RETRIES` times (default 3) with increasing sleep between attempts when the session drops before success. **`sync` copies all deploy files in one `scp` invocation** to avoid opening many SSH sessions back-to-back. If `pull-up` still fails right after a release, set **`VPS_POST_SYNC_SLEEP`** (e.g. `15`) in `.env` for `release.sh` only.

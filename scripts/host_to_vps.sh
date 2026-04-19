@@ -206,16 +206,15 @@ cmd_sync() {
     [[ -f "$f" ]] || { echo "error: missing file $f" >&2; exit 1; }
   done
 
+  # One scp session for all files (avoids five rapid SSH connections before pull-up).
   # shellcheck disable=SC2086
-  scp $opts "$ROOT/docker-compose.hub.yml" "$dest"
-  # shellcheck disable=SC2086
-  scp $opts "$ROOT/deploy/vps-update-hub.sh" "$dest"
-  # shellcheck disable=SC2086
-  scp $opts "$ROOT/deploy/email2telegram.service" "$dest"
-  # shellcheck disable=SC2086
-  scp $opts "$ROOT/deploy/email2telegram-hub-update.service" "$dest"
-  # shellcheck disable=SC2086
-  scp $opts "$ROOT/deploy/email2telegram-hub-update.timer" "$dest"
+  scp $opts \
+    "$ROOT/docker-compose.hub.yml" \
+    "$ROOT/deploy/vps-update-hub.sh" \
+    "$ROOT/deploy/email2telegram.service" \
+    "$ROOT/deploy/email2telegram-hub-update.service" \
+    "$ROOT/deploy/email2telegram-hub-update.timer" \
+    "$dest"
 
   echo "Synced to ${target}:${rdir}/"
   echo "On VPS: .env with DOCKER_IMAGE + secrets; chmod 600 .env; chmod +x ${rdir}/vps-update-hub.sh"
