@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 import os
 import platform
@@ -43,6 +43,23 @@ async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
         )
     except Exception:
         logging.exception("IMAP delivery cycle failed")
+
+
+async def _job_heartbeat(context: ContextTypes.DEFAULT_TYPE) -> None:
+    bd = context.application.bot_data
+    state = bd["state"]
+    try:
+        current = await asyncio.to_thread(state.get_heartbeat_counter)
+        await send_formatted_text(
+            bd["chat_id"],
+            str(current),
+            bot=context.application.bot,
+            service_version=bd["service_version"],
+            allowed_chat_ids=bd["allowed_chat_ids"],
+        )
+        await asyncio.to_thread(state.set_heartbeat_counter, current + 1)
+    except Exception:
+        logging.exception("Heartbeat job failed")
 
 
 async def _cmd_start(update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -181,6 +198,23 @@ def main() -> None:
     if jq is None:
         raise RuntimeError("JobQueue unavailable; pip install 'python-telegram-bot[job-queue]'")
     jq.run_repeating(_poll_imap, interval=poll_interval, first=5.0)
+
+    now_local = datetime.now(timezone.utc).astimezone()
+    next_mark = now_local.replace(minute=45, second=0, microsecond=0)
+    if next_mark <= now_local:
+        next_mark += timedelta(hours=1)
+    heartbeat_first = (next_mark - now_local).total_seconds()
+    jq.run_repeating(
+        _job_heartbeat,
+        interval=3600,
+        first=heartbeat_first,
+        name="heartbeat",
+    )
+    logging.info(
+        "heartbeat scheduled: first in %.1fs at %s",
+        heartbeat_first,
+        next_mark.isoformat(timespec="seconds"),
+    )
 
     logging.info(
         "email2telegram v%s started | poll=%ss | allowlist=%s | export=%s | state=%s",

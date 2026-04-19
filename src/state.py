@@ -58,6 +58,21 @@ class StateStore:
         data["last_service_version"] = value
         self._save(data)
 
+    def get_heartbeat_counter(self) -> int:
+        data = self._load()
+        raw = data.get("heartbeat_counter")
+        if raw is None:
+            return 0
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return 0
+
+    def set_heartbeat_counter(self, value: int) -> None:
+        data = self._load()
+        data["heartbeat_counter"] = int(value)
+        self._save(data)
+
     def has_message_id(self, message_id: str) -> bool:
         mid = (message_id or "").strip()
         if not mid:
