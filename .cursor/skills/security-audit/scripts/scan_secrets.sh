@@ -89,7 +89,7 @@ fi
 
 secret_pattern='(IMAP_PASS=|TELEGRAM_BOT_TOKEN=|ghp_[A-Za-z0-9]{30,}|ghu_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,})'
 
-if git ls-files -z | xargs -0 grep -nHE "$secret_pattern" 2>/dev/null | grep -Ev '(^|:)\.env\.example:|\.md:|\.plan\.md:' >/tmp/security_scan_workspace_hits.txt; then
+if git grep -nHE "$secret_pattern" -- . ':(exclude).cursor/skills/security-audit/scripts/scan_secrets.sh' 2>/dev/null | grep -Ev '(^|:)\.env\.example:|\.md:|\.plan\.md:' >/tmp/security_scan_workspace_hits.txt; then
   fail "secret-like patterns found in workspace files"
   sed 's/^/  /' /tmp/security_scan_workspace_hits.txt
 else
