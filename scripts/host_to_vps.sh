@@ -45,15 +45,16 @@ if [[ "$_w_vps_rdir" -eq 1 ]]; then VPS_REMOTE_DIR="$_s_vps_rdir"; fi
 if [[ "$_w_vps_ssh_opts" -eq 1 ]]; then VPS_SSH_OPTS="$_s_vps_ssh_opts"; fi
 
 vps_ssh_opts() {
-  local out=""
+  # Keep long `docker compose pull` sessions alive through NAT/firewalls; later -o flags win if duplicated in VPS_SSH_OPTS.
+  local out="-o ServerAliveInterval=15 -o ServerAliveCountMax=8 -o TCPKeepAlive=yes"
   if [[ -n "${VPS_SSH_PORT:-}" ]]; then
-    out="-p ${VPS_SSH_PORT}"
+    out="${out} -p ${VPS_SSH_PORT}"
   fi
   if [[ -n "${VPS_SSH_OPTS:-}" ]]; then
-    out="${out:+$out }${VPS_SSH_OPTS}"
+    out="${out} ${VPS_SSH_OPTS}"
   fi
   if [[ -n "${VPS_SSH_VERBOSE:-}" ]]; then
-    out="${out:+$out }-v"
+    out="${out} -v"
   fi
   printf '%s' "$out"
 }
@@ -75,12 +76,12 @@ remote_sh() {
 }
 
 vps_scp_opts() {
-  local out=""
+  local out="-o ServerAliveInterval=15 -o ServerAliveCountMax=8 -o TCPKeepAlive=yes"
   if [[ -n "${VPS_SSH_PORT:-}" ]]; then
-    out="-P ${VPS_SSH_PORT}"
+    out="${out} -P ${VPS_SSH_PORT}"
   fi
   if [[ -n "${VPS_SSH_OPTS:-}" ]]; then
-    out="${out:+$out }${VPS_SSH_OPTS}"
+    out="${out} ${VPS_SSH_OPTS}"
   fi
   printf '%s' "$out"
 }
@@ -112,7 +113,7 @@ usage() {
   cat <<'EOF'
 host_to_vps.sh — sync deploy files to VPS, remote compose pull/up, Hub timer (from your PC).
 
-Defaults from .env: VPS_USER, VPS_HOST, optional VPS_SSH_PORT, VPS_REMOTE_DIR, VPS_SSH_OPTS, VPS_SSH_VERBOSE.
+Defaults from .env: VPS_USER, VPS_HOST, optional VPS_SSH_PORT, VPS_REMOTE_DIR, VPS_SSH_OPTS, VPS_SSH_VERBOSE, VPS_PULL_UP_RETRIES (default 3, backoff between SSH attempts for pull-up).
 Remote docker runs via bash -lc (login PATH). Debug: VPS_SSH_VERBOSE=1.
 
   ./scripts/host_to_vps.sh [-p PORT] sync   [user@host [REMOTE_DIR]]
@@ -222,11 +223,27 @@ cmd_sync() {
 }
 
 cmd_pull_up() {
-  local target rdir opts inner log_inner
+  local target rdir opts inner log_inner attempt max delay
   target="$(resolve_target "${1:-}")"
   rdir="$(resolve_rdir "${2:-}")"
   inner="cd $(printf %q "$rdir") && set -euo pipefail && docker compose -f docker-compose.hub.yml pull && docker compose -f docker-compose.hub.yml up -d --force-recreate && docker compose -f docker-compose.hub.yml ps"
-  remote_sh "$target" "$inner" ""
+  max="${VPS_PULL_UP_RETRIES:-3}"
+  [[ "$max" =~ ^[1-9][0-9]*$ ]] || max=3
+  attempt=1
+  delay=5
+  while [[ "$attempt" -le "$max" ]]; do
+    if remote_sh "$target" "$inner" ""; then
+      break
+    fi
+    if [[ "$attempt" -ge "$max" ]]; then
+      echo "error: pull-up failed after ${max} attempt(s) (SSH or remote docker compose)" >&2
+      exit 1
+    fi
+    echo "pull-up: attempt ${attempt} failed, retrying in ${delay}s..." >&2
+    sleep "$delay"
+    delay=$((delay + 5))
+    attempt=$((attempt + 1))
+  done
   opts="$(vps_ssh_opts)"
   log_inner="cd $(printf %q "$rdir") && docker compose -f docker-compose.hub.yml logs -f"
   # shellcheck disable=SC2086

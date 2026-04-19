@@ -24,4 +24,4 @@
 - `TAG` (default `latest`)
 - `NO_BUMP=1` (skip MINOR bump in Hub publish script)
 - `VPS_USER`, `VPS_HOST`
-- `VPS_SSH_PORT`, `VPS_REMOTE_DIR`, `VPS_SSH_OPTS`, `VPS_SSH_VERBOSE`
+- `VPS_SSH_PORT`, `VPS_REMOTE_DIR`, `VPS_SSH_OPTS`, `VPS_SSH_VERBOSE`, `VPS_PULL_UP_RETRIES` (default `3`; `host_to_vps.sh` pull-up retries)
