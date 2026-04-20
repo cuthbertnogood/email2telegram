@@ -1,5 +1,7 @@
 # Environment Variables
 
+Deploy scripts (`release.sh`, `host_to_vps.sh`, `host_to_docker_hub.sh`) load `.env` as **dotenv** (`KEY=value` lines only), not as a shell script — values may contain `;` or spaces without breaking bash.
+
 ## Required
 
 - `IMAP_HOST`

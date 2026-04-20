@@ -21,10 +21,9 @@ _du_was_set=0
 [[ -n "${DOCKER_USER+x}" ]] && _du_was_set=1
 _saved_docker_user="${DOCKER_USER-}"
 if [[ -f "$ROOT/.env" ]]; then
-  set -a
   # shellcheck disable=SC1091
-  source "$ROOT/.env"
-  set +a
+  source "$ROOT/scripts/dotenv.sh"
+  dotenv_load "$ROOT/.env"
 fi
 if [[ "$_du_was_set" -eq 1 ]]; then
   DOCKER_USER="$_saved_docker_user"

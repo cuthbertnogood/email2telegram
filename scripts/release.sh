@@ -52,10 +52,9 @@ for req in "./scripts/host_to_docker_hub.sh" "./scripts/host_to_vps.sh" "./scrip
 done
 
 if [[ -f "$ROOT/.env" ]]; then
-  set -a
   # shellcheck disable=SC1091
-  source "$ROOT/.env"
-  set +a
+  source "$ROOT/scripts/dotenv.sh"
+  dotenv_load "$ROOT/.env"
 fi
 
 NO_BUMP="${NO_BUMP:-}"

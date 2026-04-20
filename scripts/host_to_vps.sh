@@ -32,10 +32,9 @@ _w_vps_ssh_opts=0
 _s_vps_ssh_opts="${VPS_SSH_OPTS-}"
 
 if [[ -f "$ROOT/.env" ]]; then
-  set -a
   # shellcheck disable=SC1091
-  source "$ROOT/.env"
-  set +a
+  source "$ROOT/scripts/dotenv.sh"
+  dotenv_load "$ROOT/.env"
 fi
 
 if [[ "$_w_vps_user" -eq 1 ]]; then VPS_USER="$_s_vps_user"; fi
