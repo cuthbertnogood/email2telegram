@@ -1,0 +1,31 @@
+---
+description: Pytest и тесты email2telegram
+globs:
+  - tests/**/*.py
+  - tests/*.py
+alwaysApply: false
+---
+
+# Tests
+
+## Запуск
+
+- Из корня репозитория: `python3 -m pytest -q`
+- Один файл: `python3 -m pytest -q tests/test_pipeline.py`
+- Один тест: `python3 -m pytest -q tests/test_pipeline.py::test_run_delivery_cycle_happy_path`
+
+## Layout
+
+- `tests/conftest.py` — добавляет `src/` в `sys.path` (`ROOT`, `SRC`); импорты тестов как в проде: `from pipeline import ...` (без префикса `src.`).
+
+## Стиль
+
+- `from __future__ import annotations` в новых/существенно меняемых файлах тестов.
+- Async-тесты: `@pytest.mark.asyncio` и `async def`, как в `test_pipeline.py`.
+- Для изоляции IMAP/Telegram используй **фейки** (`DummyClient`, `DummyState`, `DummyBot`) или `monkeypatch` — не ходить в реальные API из unit-тестов без явного запроса пользователя.
+
+## Что тестировать
+
+- Парсинг и форматирование: `test_parser.py`, `test_message_format.py`
+- Пайплайн доставки: `test_pipeline.py`
+- Состояние и дедуп: `test_state.py`

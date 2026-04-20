@@ -1,0 +1,9 @@
+# Secrets and local env — do not read via agent tools
+.env
+.env.*
+!.env.example
+
+# Large / binary / local artifacts
+*.eml
+*.log
+logs/

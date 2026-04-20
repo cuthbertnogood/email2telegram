@@ -1,0 +1,29 @@
+---
+description: Docker и systemd-артефакты деплоя
+globs:
+  - Dockerfile
+  - docker-compose*.yml
+  - deploy/**
+alwaysApply: false
+---
+
+# Docker & deploy
+
+## Образ
+
+- [Dockerfile](Dockerfile): `python:3.12-slim-bookworm`, non-root `appuser` (uid 1000), `WORKDIR /app`, `STATE_FILE` по умолчанию `/data/.state.json`, `HEALTHCHECK` читает state JSON.
+- `APP_VERSION` прокидывается через `ARG`/`LABEL`/`ENV` для трейсабельности образа.
+
+## Compose
+
+- [docker-compose.yml](docker-compose.yml): локальная сборка (`build: .`), `env_file: .env`, volume `email2telegram_data` → `/data`, без exposed портов.
+- [docker-compose.hub.yml](docker-compose.hub.yml): образ с Docker Hub на VPS (см. `DEPLOY.md`).
+
+## Deploy
+
+- `deploy/*.service`, `deploy/*.timer` — systemd юниты для хоста; не ломать пути к compose и таймерам без синка с `docs/dev/deploy-to-vps.md`.
+
+## Инварианты
+
+- Не запускать процесс от root внутри контейнера.
+- Сохранять `PYTHONUNBUFFERED=1` и осмысленный `stop_grace_period` для корректного shutdown polling-цикла.

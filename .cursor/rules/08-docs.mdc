@@ -1,0 +1,28 @@
+---
+description: Документация docs/ и README
+globs:
+  - docs/**/*.md
+  - README.md
+  - README.ru.md
+  - DEPLOY.md
+alwaysApply: false
+---
+
+# Documentation
+
+## Структура
+
+- **`docs/user/`** — пользовательские гайды (env, deploy, troubleshooting, провайдеры).
+- **`docs/dev/`** — разработка (архитектура, CI, release pipeline, Cursor skills).
+- **`DEPLOY.md`** — короткий вход в деплой; детали в `docs/user/deploy.md` и `docs/dev/deploy-to-vps.md`.
+
+## README и русская версия
+
+- `README.md` — основной вход (английский).
+- `README.ru.md` — краткое зеркало; синхронизация по маркеру SHA через `scripts/sync_readme_ru.py` (см. скилл `docs-ru-sync`).
+- После существенных правок `README.md` прогонять `python3 scripts/sync_readme_ru.py` и при необходимости вручную подправить формулировки в `README.ru.md`.
+
+## Стиль
+
+- Ясные заголовки, команды в fenced code blocks, ссылки на файлы репозитория относительными путями.
+- Не дублировать секреты и реальные хосты/логины — использовать плейсхолдеры.

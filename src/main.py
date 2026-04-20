@@ -210,10 +210,21 @@ def main() -> None:
 
     if heartbeat_interval > 0:
         now_local = datetime.now(timezone.utc).astimezone()
-        next_mark = now_local.replace(minute=heartbeat_minute, second=0, microsecond=0)
-        if next_mark <= now_local:
-            next_mark += timedelta(hours=1)
-        heartbeat_first = (next_mark - now_local).total_seconds()
+        # Wall-clock grid: ticks every HEARTBEAT_INTERVAL_SECONDS within the hour,
+        # anchored so one tick falls on minute HEARTBEAT_MINUTE (defaults -> :00/:15/:30/:45).
+        # After restart, first run is the next grid point, not "same minute + 1 hour".
+        hi = heartbeat_interval
+        anchor = (heartbeat_minute * 60) % int(hi)
+        seconds_in_hour = (
+            now_local.minute * 60
+            + now_local.second
+            + now_local.microsecond / 1_000_000
+        )
+        delta = (anchor - seconds_in_hour) % hi
+        if delta < 1e-9:
+            delta = float(hi)
+        heartbeat_first = delta
+        next_mark = now_local + timedelta(seconds=delta)
         jq.run_repeating(
             _job_heartbeat,
             interval=heartbeat_interval,

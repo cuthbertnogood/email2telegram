@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Heartbeat: periodic Telegram ping with monotonically increasing counter (starts at 0); persisted in state (`heartbeat_counter`). Defaults: 15-minute interval, first tick aligned to minute `:45` (`HEARTBEAT_INTERVAL_SECONDS`, `HEARTBEAT_MINUTE` in `.env`; `0` interval disables).
+- Heartbeat: periodic Telegram ping with monotonically increasing counter (starts at 0); persisted in state (`heartbeat_counter`). Defaults: 15-minute wall-clock grid `:00/:15/:30/:45` in process timezone (`HEARTBEAT_INTERVAL_SECONDS`, `HEARTBEAT_MINUTE` in `.env`; `0` interval disables).
 - Structured documentation split by audience: `docs/user/*` for operators and `docs/dev/*` for project/release maintenance.
 - README sync automation: `scripts/sync_readme_ru.py` with `--translate` and `--check`, plus marker hash validation in `README.ru.md`.
 - Git hook tooling: `.githooks/pre-commit` and `scripts/install_git_hooks.sh` to enforce README sync locally.
@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Heartbeat: first tick after process start is the next wall-clock grid point for `HEARTBEAT_INTERVAL_SECONDS` (anchored by `HEARTBEAT_MINUTE`), not the previous “same minute + 1 hour” rule—restarts no longer skip an entire hour of ticks.
 - Root `README.md` and `README.ru.md` reduced to concise entry points with links to user/project docs.
 - `DEPLOY.md` converted to a slim pointer to dedicated user/dev deployment docs.
 - `scripts/release.sh` now performs README sync check before the test/build/deploy pipeline.

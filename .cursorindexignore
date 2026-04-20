@@ -1,0 +1,16 @@
+# Keep codebase index lean (noise and generated paths)
+.git/
+__pycache__/
+.venv/
+venv/
+dist/
+build/
+*.pyc
+*.pyo
+logs/
+*.log
+*.eml
+terminals/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

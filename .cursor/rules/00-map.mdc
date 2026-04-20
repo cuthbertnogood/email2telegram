@@ -1,0 +1,25 @@
+---
+description: Карта репозитория и точка входа в архитектуру
+alwaysApply: true
+---
+
+# Repository map
+
+Краткая навигация по коду и документам — **полная схема модулей и потоков данных** в [docs/dev/architecture.md](docs/dev/architecture.md).
+
+| Область | Путь |
+|--------|------|
+| Точка входа, JobQueue, хендлеры | `src/main.py` |
+| Опрос IMAP | `src/imap_client.py` |
+| Разбор писем | `src/parser.py` |
+| Цикл доставки | `src/pipeline.py` |
+| Telegram send / формат | `src/telegram_client.py`, `src/message_format.py` |
+| Allowlist | `src/allowlist.py` |
+| Состояние на диске | `src/state.py` |
+| Диагностика IMAP без бота | `src/imap_probe.py` |
+| Тесты | `tests/` |
+| Релиз / хост скрипты | `scripts/` |
+| Пользовательская документация | `docs/user/` |
+| Документация для разработчиков | `docs/dev/` |
+
+При смене контрактов между модулями — обновляй раздел **Module responsibilities** в `docs/dev/architecture.md`.

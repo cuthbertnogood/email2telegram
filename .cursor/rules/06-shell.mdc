@@ -1,0 +1,27 @@
+---
+description: Bash-скрипты в scripts/ и deploy/
+globs:
+  - scripts/**/*.sh
+  - deploy/**/*.sh
+alwaysApply: false
+---
+
+# Shell scripts
+
+## Обязательно
+
+- В начале файла: `set -euo pipefail` (или `set -Eeuo pipefail` где нужен ERR-трап).
+- `ROOT` через `cd "$(dirname "${BASH_SOURCE[0]}")/.."` или аналог; не хардкодить абсолютные пути пользователя.
+
+## Связка релиза
+
+- `scripts/release.sh` оркестрирует тесты, Docker Hub (`host_to_docker_hub.sh`), VPS (`host_to_vps.sh`), GitHub (`host_to_github.sh`).
+- Не менять семантику флагов (`--skip-tests`, `--allow-dirty`, …) без обновления `docs/release-sh.md` и help-текста в скрипте.
+
+## Секреты
+
+- Скрипты не должны печатать содержимое `.env` или токены. Для VPS используй SSH/env на стороне пользователя, не вшивай пароли в репозиторий.
+
+## Проверка
+
+- После правок: `shellcheck` (если доступен) или хотя бы ручной прогон с `bash -n script.sh`.
