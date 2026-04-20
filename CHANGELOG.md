@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.16.4] - 2026-04-20
+
 ### Added
 
 - Heartbeat: periodic Telegram ping with monotonically increasing counter (starts at 0); persisted in state (`heartbeat_counter`). Defaults: 15-minute wall-clock grid `:00/:15/:30/:45` in process timezone (`HEARTBEAT_INTERVAL_SECONDS`, `HEARTBEAT_MINUTE` in `.env`; `0` interval disables).
@@ -20,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Root `README.md` and `README.ru.md` reduced to concise entry points with links to user/project docs.
 - `DEPLOY.md` converted to a slim pointer to dedicated user/dev deployment docs.
 - `scripts/release.sh` now performs README sync check before the test/build/deploy pipeline.
+
+### Fixed
+
+- Load `.env` via `scripts/dotenv.sh` (`dotenv_load`) instead of shell `source`, so unquoted values containing `;` no longer break `release.sh`, `host_to_vps.sh`, and `host_to_docker_hub.sh`.
+- VPS `sync-env`: strip mistaken leading `; ` before `KEY=value`, rewrite bare `; comment` lines to `# comment` in the VPS-bound copy, and apply the same leading-semicolon strip in `dotenv_load` so Docker Compose accepts the pushed `.env`.
 
 ## [0.8.2] - 2026-04-17
 
