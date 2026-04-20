@@ -1,6 +1,6 @@
 # Environment Variables
 
-Deploy scripts (`release.sh`, `host_to_vps.sh`, `host_to_docker_hub.sh`) load `.env` as **dotenv** (`KEY=value` lines only), not as a shell script — values may contain `;` or spaces without breaking bash.
+Deploy scripts (`release.sh`, `host_to_vps.sh`, `host_to_docker_hub.sh`) load `.env` as **dotenv** (`KEY=value` lines only), not as a shell script — values may contain `;` or spaces without breaking bash. A mistaken leading `;` before `KEY=value` (INI paste) is stripped; `sync-env` turns bare `; comment` lines into `# comment` so Docker Compose accepts the file.
 
 ## Required
 

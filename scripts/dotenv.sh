@@ -8,6 +8,12 @@ dotenv_load() {
   [[ -f "$env_file" ]] || return 0
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%$'\r'}"
+    # Mistaken "; KEY=value" (paste/INI). Docker Compose rejects leading ';'.
+    if [[ "$line" =~ ^[[:space:]]*\;[[:space:]]*export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      line="export ${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
+    elif [[ "$line" =~ ^[[:space:]]*\;[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      line="${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
+    fi
     [[ "$line" =~ ^[[:space:]]*# ]] && continue
     [[ -z "${line//[[:space:]]/}" ]] && continue
     if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then

@@ -235,6 +235,16 @@ render_vps_env() {
   chmod 600 "$dst"
   local line key have_image=0
   while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    # Same as dotenv.sh: "; KEY=value" breaks docker compose env_file parsing.
+    if [[ "$line" =~ ^[[:space:]]*\;[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      line="${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
+    fi
+    # INI-style "; text" without '=' — compose env_file rejects leading ';'.
+    if [[ "$line" =~ ^([[:space:]]*)\;(.*)$ ]] && [[ "$line" != *"="* ]]; then
+      printf '%s#%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" >> "$dst"
+      continue
+    fi
     if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*= ]]; then
       key="${BASH_REMATCH[1]}"
       case "$key" in
