@@ -116,10 +116,11 @@ host_to_vps.sh — sync deploy files to VPS, remote compose pull/up, Hub timer (
 Defaults from .env: VPS_USER, VPS_HOST, optional VPS_SSH_PORT, VPS_REMOTE_DIR, VPS_SSH_OPTS, VPS_SSH_VERBOSE, VPS_PULL_UP_RETRIES (default 3, backoff between SSH attempts for pull-up).
 Remote docker runs via bash -lc (login PATH). Debug: VPS_SSH_VERBOSE=1.
 
-  ./scripts/host_to_vps.sh [-p PORT] sync   [user@host [REMOTE_DIR]]
-  ./scripts/host_to_vps.sh [-p PORT] pull-up   [user@host [REMOTE_DIR]]
+  ./scripts/host_to_vps.sh [-p PORT] sync       [user@host [REMOTE_DIR]]
+  ./scripts/host_to_vps.sh [-p PORT] sync-env   [user@host [REMOTE_DIR]]   # push filtered .env (tokens/secrets) to VPS as mode 600
+  ./scripts/host_to_vps.sh [-p PORT] pull-up    [user@host [REMOTE_DIR]]
   ./scripts/host_to_vps.sh [-p PORT] enable-timer   [user@host [REMOTE_DIR]]
-  ./scripts/host_to_vps.sh [-p PORT] deploy   [user@host [REMOTE_DIR]]   # sync + pull-up + enable-timer
+  ./scripts/host_to_vps.sh [-p PORT] deploy    [user@host [REMOTE_DIR]]   # sync + pull-up + enable-timer
 
   ./scripts/host_to_vps.sh hub-checklist      # Docker Hub browser + PAT reminder
   ./scripts/host_to_vps.sh install-docker     # print Ubuntu Docker install one-liner
@@ -221,6 +222,69 @@ cmd_sync() {
   echo "Then: ./scripts/host_to_vps.sh pull-up   (same .env targets this host)"
 }
 
+render_vps_env() {
+  # Write a VPS-bound copy of the local .env to $2, stripping PC-only keys and
+  # injecting DOCKER_IMAGE from DOCKER_USER+TAG so the compose file always has it.
+  local src="$1"
+  local dst="$2"
+  local tag="${TAG:-latest}"
+  local docker_image="${DOCKER_IMAGE:-}"
+  if [[ -z "$docker_image" && -n "${DOCKER_USER:-}" ]]; then
+    docker_image="${DOCKER_USER}/email2telegram:${tag}"
+  fi
+  : > "$dst"
+  chmod 600 "$dst"
+  local line key have_image=0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*= ]]; then
+      key="${BASH_REMATCH[1]}"
+      case "$key" in
+        DOCKER_USER|NO_BUMP|TAG|OPENAI_API_KEY|ANTHROPIC_API_KEY)
+          continue ;;
+        VPS_*|LLM_*)
+          continue ;;
+        DOCKER_IMAGE)
+          if [[ -n "$docker_image" ]]; then
+            printf 'DOCKER_IMAGE=%s\n' "$docker_image" >> "$dst"
+          else
+            printf '%s\n' "$line" >> "$dst"
+          fi
+          have_image=1
+          continue ;;
+      esac
+    fi
+    printf '%s\n' "$line" >> "$dst"
+  done < "$src"
+  if [[ "$have_image" -eq 0 && -n "$docker_image" ]]; then
+    printf '\n# Injected by host_to_vps.sh sync-env from DOCKER_USER+TAG:\n' >> "$dst"
+    printf 'DOCKER_IMAGE=%s\n' "$docker_image" >> "$dst"
+  fi
+}
+
+cmd_sync_env() {
+  local target rdir scp_opts tmp
+  target="$(resolve_target "${1:-}")"
+  rdir="$(resolve_rdir "${2:-}")"
+  if [[ ! -f "$ROOT/.env" ]]; then
+    echo "error: local .env not found at $ROOT/.env" >&2
+    exit 1
+  fi
+  if [[ -z "${DOCKER_USER:-}" && -z "${DOCKER_IMAGE:-}" ]]; then
+    echo "error: DOCKER_USER or DOCKER_IMAGE must be set in .env to derive VPS DOCKER_IMAGE" >&2
+    exit 1
+  fi
+  tmp="$(mktemp -t email2telegram-env.XXXXXX)"
+  # shellcheck disable=SC2064
+  trap "rm -f $(printf %q "$tmp")" RETURN
+  render_vps_env "$ROOT/.env" "$tmp"
+  scp_opts="$(vps_scp_opts)"
+  # Staged file → atomic-ish rename on remote so the container never sees a half-written .env.
+  # shellcheck disable=SC2086
+  scp $scp_opts "$tmp" "${target}:${rdir}/.env.new" >/dev/null
+  remote_sh "$target" "cd $(printf %q "$rdir") && chmod 600 .env.new && mv .env.new .env" ""
+  echo "Synced .env to ${target}:${rdir}/.env (mode 600, PC-only keys stripped)"
+}
+
 cmd_pull_up() {
   local target rdir opts inner log_inner attempt max delay
   target="$(resolve_target "${1:-}")"
@@ -307,6 +371,7 @@ EOF
 
 case "$cmd" in
   sync) cmd_sync "${1:-}" "${2:-}" ;;
+  sync-env) cmd_sync_env "${1:-}" "${2:-}" ;;
   pull-up) cmd_pull_up "${1:-}" "${2:-}" ;;
   enable-timer) cmd_enable_timer "${1:-}" "${2:-}" ;;
   deploy) cmd_deploy "${1:-}" "${2:-}" ;;

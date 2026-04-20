@@ -8,10 +8,10 @@ description: Build and operate the email2telegram CI/CD release pipeline. Use wh
 ## Quick start
 
 - Primary release entrypoint: `./scripts/release.sh`.
-- This one command runs tests, publishes the Docker image, syncs deploy files to VPS, triggers remote `pull + up -d --force-recreate`, and pushes local project changes to GitHub by default.
+- This one command runs tests, publishes the Docker image, syncs deploy files to VPS, pushes a filtered `.env` to VPS (for secret/token rotation without SSH), triggers remote `pull + up -d --force-recreate`, and pushes local project changes to GitHub by default.
 - Use low-level scripts only for partial/manual steps:
   - `./scripts/host_to_docker_hub.sh`
-  - `./scripts/host_to_vps.sh`
+  - `./scripts/host_to_vps.sh` (`sync`, `sync-env`, `pull-up`, `enable-timer`, `deploy`)
 
 ## When to apply this skill
 
@@ -33,12 +33,17 @@ Apply this skill when task mentions one of:
 
 ## Supported release modes
 
-- Default: `./scripts/release.sh` (tests + MINOR bump + Docker push + VPS deploy + GitHub push).
+- Default: `./scripts/release.sh` (tests + MINOR bump + Docker push + VPS deploy + VPS `.env` sync + GitHub push).
 - No bump: `./scripts/release.sh --no-bump`.
 - Hotfix skip tests: `./scripts/release.sh --skip-tests`.
+- Skip VPS `.env` push (manual secret management): `./scripts/release.sh --skip-env-sync` or `VPS_SYNC_ENV=0` in `.env`.
 - Include timer setup: `./scripts/release.sh --enable-timer`.
 - Skip GitHub push: `./scripts/release.sh --no-push-github`.
 - Override target host/dir: `./scripts/release.sh user@host /opt/email2telegram`.
+
+## Secret rotation
+
+When `TELEGRAM_BOT_TOKEN`, `IMAP_PASS`, or similar secrets need rotation: edit local `.env` on PC, run `./scripts/release.sh`. Filtered `.env` (no `DOCKER_USER`/`VPS_*`/`LLM_*`) is pushed to VPS and container is force-recreated. No SSH, no manual VPS edit.
 
 ## Required files in this repo
 

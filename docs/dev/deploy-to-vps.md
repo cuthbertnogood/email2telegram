@@ -9,6 +9,7 @@ Script:
 ## Main Subcommands
 
 - `sync`: copy `docker-compose.hub.yml` and `deploy/*` artifacts to VPS.
+- `sync-env`: render local `.env` (minus PC-only keys) and push it to VPS as `${VPS_REMOTE_DIR}/.env` with mode `600`. Used for secret rotation (bot token, IMAP password). See [Filtering rules](#env-sync-filtering-rules).
 - `pull-up`: run remote `docker compose pull` + `up -d --force-recreate`.
 - `enable-timer`: install and enable hub update systemd timer.
 - `deploy`: `sync + pull-up + enable-timer`.
@@ -31,11 +32,31 @@ Optional:
 
 ```bash
 ./scripts/host_to_vps.sh sync
+./scripts/host_to_vps.sh sync-env                  # push filtered .env (rotate secrets without SSH)
 ./scripts/host_to_vps.sh pull-up
 ./scripts/host_to_vps.sh deploy
 ./scripts/host_to_vps.sh -p 2222 sync
 ./scripts/host_to_vps.sh sync deploy@203.0.113.10 /srv/email2telegram
 ```
+
+## Env Sync Filtering Rules
+
+`sync-env` reads the local `.env`, strips PC-only keys, and injects `DOCKER_IMAGE` derived from `DOCKER_USER` + `TAG` (defaults to `latest`). Comments and blank lines are preserved for readability.
+
+Stripped (never pushed to VPS):
+
+- `DOCKER_USER`, `NO_BUMP`, `TAG`
+- `VPS_*` (all VPS-side SSH/host config lives only on your PC)
+- `LLM_*`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` (docs translation lives on PC)
+
+Kept (shipped to VPS verbatim):
+
+- `IMAP_*`, `POLL_INTERVAL_SECONDS`, `HEARTBEAT_*`
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_ALLOWED_CHAT_IDS`
+- `TZ`, `EXPORT_MAIL_DIR`, `STATE_FILE`
+- Anything else not in the strip list
+
+The remote file is staged as `.env.new`, then moved into place atomically (`mv .env.new .env`) with mode `600`, so a half-written file is never visible to the container.
 
 ## Troubleshooting
 

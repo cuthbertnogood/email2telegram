@@ -17,14 +17,15 @@ If the git working tree is dirty, all changes are staged (git add -A) and commit
 before the pipeline runs, unless --allow-dirty is set.
 
 Options:
-  --no-bump       Do not bump VERSION in host_to_docker_hub.sh (sets NO_BUMP=1)
-  --skip-security Skip security scan script before release checks
-  --skip-tests    Skip python3 -m pytest -q
-  --allow-dirty   Allow dirty git working tree (skip auto-commit)
-  --enable-timer  Also run host_to_vps.sh enable-timer after pull-up
+  --no-bump         Do not bump VERSION in host_to_docker_hub.sh (sets NO_BUMP=1)
+  --skip-security   Skip security scan script before release checks
+  --skip-tests      Skip python3 -m pytest -q
+  --allow-dirty     Allow dirty git working tree (skip auto-commit)
+  --skip-env-sync   Skip pushing filtered local .env to VPS (secrets/tokens rotation)
+  --enable-timer    Also run host_to_vps.sh enable-timer after pull-up
   --no-push-github  Skip host_to_github.sh at the end (default is push)
-  --tag TAG       Override TAG for host_to_docker_hub.sh
-  -h, --help      Show this help
+  --tag TAG         Override TAG for host_to_docker_hub.sh
+  -h, --help        Show this help
 
 Examples:
   ./scripts/release.sh
@@ -32,7 +33,14 @@ Examples:
   ./scripts/release.sh --skip-tests --enable-timer
   ./scripts/release.sh deploy@203.0.113.10 /opt/email2telegram
 
-Env (from .env): optional VPS_POST_SYNC_SLEEP=seconds between VPS sync and pull-up if SSH rate-limits connections.
+Secret rotation (e.g. TELEGRAM_BOT_TOKEN revoked via BotFather):
+  1. Edit the new token in local .env.
+  2. Run ./scripts/release.sh — filtered .env (no PC-only keys) is pushed to VPS
+     and the container is recreated with the new token automatically.
+
+Env (from .env):
+  VPS_POST_SYNC_SLEEP  seconds between VPS sync and pull-up if SSH rate-limits connections.
+  VPS_SYNC_ENV=0       disable automatic .env sync to VPS (equivalent to --skip-env-sync).
 EOF
 }
 
@@ -57,6 +65,10 @@ SKIP_SECURITY=0
 ALLOW_DIRTY=0
 ENABLE_TIMER=0
 PUSH_GITHUB=1
+SYNC_ENV=1
+if [[ "${VPS_SYNC_ENV:-1}" == "0" ]]; then
+  SYNC_ENV=0
+fi
 POSITIONAL=()
 
 while [[ $# -gt 0 ]]; do
@@ -79,6 +91,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --allow-dirty)
       ALLOW_DIRTY=1
+      shift
+      ;;
+    --skip-env-sync)
+      SYNC_ENV=0
       shift
       ;;
     --enable-timer)
@@ -148,44 +164,55 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 sha="$(git rev-parse --short HEAD 2>/dev/null || echo local)"
-echo "Release start | sha=${sha} | tag=${TAG} | no_bump=${NO_BUMP:-0} | push_github=${PUSH_GITHUB}"
+echo "Release start | sha=${sha} | tag=${TAG} | no_bump=${NO_BUMP:-0} | push_github=${PUSH_GITHUB} | sync_env=${SYNC_ENV}"
 
 if [[ "$SKIP_SECURITY" -ne 1 ]]; then
-  echo "[0/8] Running security scan..."
+  echo "[0/9] Running security scan..."
   ./.cursor/skills/security-audit/scripts/scan_secrets.sh
 else
-  echo "[0/8] Skipping security scan (--skip-security)"
+  echo "[0/9] Skipping security scan (--skip-security)"
 fi
 
-echo "[1/8] README sync check..."
+echo "[1/9] README sync check..."
 python3 scripts/sync_readme_ru.py --check
 
 if [[ "$SKIP_TESTS" -ne 1 ]]; then
-  echo "[2/8] Running tests..."
+  echo "[2/9] Running tests..."
   python3 -m pytest -q
 else
-  echo "[2/8] Skipping tests (--skip-tests)"
+  echo "[2/9] Skipping tests (--skip-tests)"
 fi
 
-echo "[3/8] Building and pushing Docker image..."
+echo "[3/9] Building and pushing Docker image..."
 NO_BUMP="$NO_BUMP" TAG="$TAG" DOCKER_USER="$DOCKER_USER" ./scripts/host_to_docker_hub.sh
 
-echo "[4/8] Verifying image in registry..."
+echo "[4/9] Verifying image in registry..."
 docker buildx imagetools inspect "${DOCKER_USER}/email2telegram:${TAG}" >/dev/null
 
-echo "[5/8] Syncing deploy files to VPS..."
+echo "[5/9] Syncing deploy files to VPS..."
 if [[ -n "$TARGET" ]]; then
   ./scripts/host_to_vps.sh sync "$TARGET" "$REMOTE_DIR"
 else
   ./scripts/host_to_vps.sh sync
 fi
 
+if [[ "$SYNC_ENV" -eq 1 ]]; then
+  echo "[6/9] Syncing filtered .env (secrets/tokens) to VPS..."
+  if [[ -n "$TARGET" ]]; then
+    TAG="$TAG" DOCKER_USER="$DOCKER_USER" ./scripts/host_to_vps.sh sync-env "$TARGET" "$REMOTE_DIR"
+  else
+    TAG="$TAG" DOCKER_USER="$DOCKER_USER" ./scripts/host_to_vps.sh sync-env
+  fi
+else
+  echo "[6/9] Skipping .env sync (--skip-env-sync or VPS_SYNC_ENV=0)"
+fi
+
 if [[ -n "${VPS_POST_SYNC_SLEEP:-}" && "${VPS_POST_SYNC_SLEEP}" =~ ^[1-9][0-9]*$ ]]; then
-  echo "[5b/8] VPS_POST_SYNC_SLEEP=${VPS_POST_SYNC_SLEEP}s before pull-up..."
+  echo "[6b/9] VPS_POST_SYNC_SLEEP=${VPS_POST_SYNC_SLEEP}s before pull-up..."
   sleep "$VPS_POST_SYNC_SLEEP"
 fi
 
-echo "[6/8] Pulling and recreating container on VPS..."
+echo "[7/9] Pulling and recreating container on VPS..."
 if [[ -n "$TARGET" ]]; then
   ./scripts/host_to_vps.sh pull-up "$TARGET" "$REMOTE_DIR"
 else
@@ -193,21 +220,21 @@ else
 fi
 
 if [[ "$ENABLE_TIMER" -eq 1 ]]; then
-  echo "[7/8] Enabling systemd timer on VPS..."
+  echo "[8/9] Enabling systemd timer on VPS..."
   if [[ -n "$TARGET" ]]; then
     ./scripts/host_to_vps.sh enable-timer "$TARGET" "$REMOTE_DIR"
   else
     ./scripts/host_to_vps.sh enable-timer
   fi
 else
-  echo "[7/8] Skipping timer enable (use --enable-timer)"
+  echo "[8/9] Skipping timer enable (use --enable-timer)"
 fi
 
 if [[ "$PUSH_GITHUB" -eq 1 ]]; then
-  echo "[8/8] Pushing project to GitHub..."
+  echo "[9/9] Pushing project to GitHub..."
   ./scripts/host_to_github.sh
 else
-  echo "[8/8] Skipping GitHub push (--no-push-github)"
+  echo "[9/9] Skipping GitHub push (--no-push-github)"
 fi
 
 ver="$(tr -d '[:space:]' < "$ROOT/VERSION")"
