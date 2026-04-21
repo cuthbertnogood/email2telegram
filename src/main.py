@@ -145,8 +145,15 @@ def main() -> None:
     imap_mailbox = os.getenv("IMAP_MAILBOX", "INBOX")
     poll_interval = float(os.getenv("POLL_INTERVAL_SECONDS", "45"))
 
-    heartbeat_interval = float(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "900"))
-    heartbeat_minute_raw = os.getenv("HEARTBEAT_MINUTE", "45")
+    heartbeat_interval = float(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "86400"))
+    heartbeat_hour_raw = os.getenv("HEARTBEAT_HOUR", "9")
+    heartbeat_minute_raw = os.getenv("HEARTBEAT_MINUTE", "0")
+    try:
+        heartbeat_hour = int(heartbeat_hour_raw, 10)
+    except ValueError as exc:
+        raise RuntimeError("HEARTBEAT_HOUR must be an integer 0-23") from exc
+    if not 0 <= heartbeat_hour <= 23:
+        raise RuntimeError("HEARTBEAT_HOUR must be between 0 and 23 inclusive")
     try:
         heartbeat_minute = int(heartbeat_minute_raw, 10)
     except ValueError as exc:
@@ -210,34 +217,61 @@ def main() -> None:
 
     if heartbeat_interval > 0:
         now_local = datetime.now(timezone.utc).astimezone()
-        # Wall-clock grid: ticks every HEARTBEAT_INTERVAL_SECONDS within the hour,
-        # anchored so one tick falls on minute HEARTBEAT_MINUTE (defaults -> :00/:15/:30/:45).
-        # After restart, first run is the next grid point, not "same minute + 1 hour".
         hi = heartbeat_interval
-        anchor = (heartbeat_minute * 60) % int(hi)
-        seconds_in_hour = (
-            now_local.minute * 60
-            + now_local.second
-            + now_local.microsecond / 1_000_000
-        )
-        delta = (anchor - seconds_in_hour) % hi
-        if delta < 1e-9:
-            delta = float(hi)
-        heartbeat_first = delta
-        next_mark = now_local + timedelta(seconds=delta)
+        hi_i = int(hi)
+        if hi_i != hi:
+            raise RuntimeError("HEARTBEAT_INTERVAL_SECONDS must be a whole number of seconds")
+        if hi_i >= 86400:
+            if hi_i % 86400 != 0:
+                raise RuntimeError(
+                    "HEARTBEAT_INTERVAL_SECONDS >= 86400 must be a multiple of 86400 (whole days)"
+                )
+            # Once (or every N days): next local wall time HEARTBEAT_HOUR:HEARTBEAT_MINUTE, then fixed interval.
+            target = now_local.replace(
+                hour=heartbeat_hour, minute=heartbeat_minute, second=0, microsecond=0
+            )
+            if target <= now_local:
+                target += timedelta(days=1)
+            heartbeat_first = (target - now_local).total_seconds()
+            next_mark = target
+        else:
+            # Wall-clock grid within the hour: ticks every HEARTBEAT_INTERVAL_SECONDS,
+            # anchored so one tick falls on minute HEARTBEAT_MINUTE (e.g. 900s + minute 45 -> :00/:15/:30/:45).
+            # After restart, first run is the next grid point, not "same minute + 1 hour".
+            anchor = (heartbeat_minute * 60) % int(hi)
+            seconds_in_hour = (
+                now_local.minute * 60
+                + now_local.second
+                + now_local.microsecond / 1_000_000
+            )
+            delta = (anchor - seconds_in_hour) % hi
+            if delta < 1e-9:
+                delta = float(hi)
+            heartbeat_first = delta
+            next_mark = now_local + timedelta(seconds=delta)
         jq.run_repeating(
             _job_heartbeat,
             interval=heartbeat_interval,
             first=heartbeat_first,
             name="heartbeat",
         )
-        logging.info(
-            "heartbeat scheduled: interval=%ss minute=%s first in %.1fs at %s",
-            heartbeat_interval,
-            heartbeat_minute,
-            heartbeat_first,
-            next_mark.isoformat(timespec="seconds"),
-        )
+        if hi_i >= 86400:
+            logging.info(
+                "heartbeat scheduled: interval=%ss wall=%02d:%02d local first in %.1fs at %s",
+                heartbeat_interval,
+                heartbeat_hour,
+                heartbeat_minute,
+                heartbeat_first,
+                next_mark.isoformat(timespec="seconds"),
+            )
+        else:
+            logging.info(
+                "heartbeat scheduled: interval=%ss minute=%s first in %.1fs at %s",
+                heartbeat_interval,
+                heartbeat_minute,
+                heartbeat_first,
+                next_mark.isoformat(timespec="seconds"),
+            )
     else:
         logging.info("heartbeat disabled (HEARTBEAT_INTERVAL_SECONDS <= 0)")
 

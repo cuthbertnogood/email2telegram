@@ -16,8 +16,9 @@ Deploy scripts (`release.sh`, `host_to_vps.sh`, `host_to_docker_hub.sh`) load `.
 - `IMAP_PORT` (default `993`)
 - `IMAP_MAILBOX` (default `INBOX`)
 - `POLL_INTERVAL_SECONDS` (default `45`)
-- `HEARTBEAT_INTERVAL_SECONDS` (default `900`; use `0` to disable the heartbeat job)
-- `HEARTBEAT_MINUTE` (default `45`): anchor minute (0–59) for the heartbeat wall-clock grid: ticks every `HEARTBEAT_INTERVAL_SECONDS` within the hour, with one tick on that minute; after restart the first run is the **next** grid point. With defaults (`900` / `45`) ticks fall at `:00`, `:15`, `:30`, `:45` in the process timezone (`TZ` in Docker if needed). If `HEARTBEAT_INTERVAL_SECONDS` does not divide 3600 evenly, the anchor is reduced modulo the interval.
+- `HEARTBEAT_INTERVAL_SECONDS` (default `86400` = once per day; use `0` to disable the heartbeat job). Values **≥ 86400** must be a **multiple of 86400** (whole days; e.g. `172800` = every 2 days).
+- `HEARTBEAT_HOUR` (default `9`, 0–23): local hour for the daily tick when `HEARTBEAT_INTERVAL_SECONDS` ≥ 86400 (ignored for shorter intervals).
+- `HEARTBEAT_MINUTE` (default `0`, 0–59): with daily interval, local minute at `HEARTBEAT_HOUR`; with shorter `HEARTBEAT_INTERVAL_SECONDS`, anchor **minute within the hour** for the intra-hour grid (e.g. `900` + minute `45` → ticks at `:00`, `:15`, `:30`, `:45` in the process timezone). After restart, the first run is the **next** scheduled point.
 - `EXPORT_MAIL_DIR` (saves `{uid}.eml`)
 - `STATE_FILE` (default `.state.json`; in Docker use `/data/.state.json`)
 - `TZ` (timezone for container logs)
