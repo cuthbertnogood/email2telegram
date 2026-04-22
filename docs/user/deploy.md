@@ -44,6 +44,59 @@ docker compose -f docker-compose.hub.yml up -d --force-recreate
 docker compose -f docker-compose.hub.yml logs -f
 ```
 
+## Where configuration lives on the VPS
+
+Default deploy directory is **`/opt/email2telegram`**. If you use another path, it is the value of **`VPS_REMOTE_DIR`** in your **PC** repo `.env` (used by `host_to_vps.sh` / `release.sh`).
+
+| Path on VPS | Role |
+|---------------|------|
+| **`/opt/email2telegram/.env`** | Runtime settings for the app: IMAP, Telegram, `DOCKER_IMAGE`, `HEARTBEAT_*`, `TZ`, `POLL_INTERVAL_SECONDS`, etc. Loaded by Compose (`env_file` in [docker-compose.hub.yml](../../docker-compose.hub.yml)) and by the Python process. **Permissions:** should be `600` (`chmod 600 .env`). |
+| **`/opt/email2telegram/docker-compose.hub.yml`** | Stack definition: image `DOCKER_IMAGE`, `env_file: .env`, `TZ` from `.env` (see `environment` in [docker-compose.hub.yml](../../docker-compose.hub.yml)), volume for state. Synced from the repo by `./scripts/host_to_vps.sh sync` (not by `sync-env`). |
+| **`/opt/email2telegram/vps-update-hub.sh`** (+ optional `deploy/*.service` / `*.timer`) | Hub pull helper and systemd units for unattended image refresh. |
+
+**Important:** Changing **only** `.env` does not affect a **running** container until you **recreate** it (`docker compose … up -d --force-recreate`). Restart without recreate can keep old environment.
+
+**PC vs VPS `.env`:** Your **local** repo `.env` also holds **deploy-only** keys (`VPS_USER`, `VPS_HOST`, `VPS_REMOTE_DIR`, `DOCKER_USER`, …). Those are **not** copied to the VPS by `sync-env` (see [deploy-to-vps.md](../dev/deploy-to-vps.md#env-sync-filtering-rules)). The VPS `.env` is the file the container actually reads at runtime.
+
+## How to apply settings after you change them
+
+### 1. You changed runtime variables only (IMAP, Telegram, heartbeat, `TZ`, …)
+
+**From your PC** (edit local `.env`, then):
+
+```bash
+./scripts/host_to_vps.sh sync-env && ./scripts/host_to_vps.sh pull-up
+```
+
+**On the VPS over SSH:**
+
+```bash
+cd /opt/email2telegram   # or your VPS_REMOTE_DIR
+nano .env                # or vim
+docker compose -f docker-compose.hub.yml up -d --force-recreate
+```
+
+`docker compose pull` is optional if the image tag did not change.
+
+### 2. You changed application code or `Dockerfile` (need a new image)
+
+Build/push from the PC, then update the VPS container:
+
+```bash
+NO_BUMP=1 ./scripts/host_to_docker_hub.sh   # or ./scripts/release.sh
+./scripts/host_to_vps.sh pull-up
+```
+
+Use `./scripts/release.sh` when you also want tests, optional `.env` sync, and GitHub push in one go.
+
+### 3. You changed `docker-compose.hub.yml` or `deploy/*` scripts
+
+From the PC:
+
+```bash
+./scripts/host_to_vps.sh sync && ./scripts/host_to_vps.sh pull-up
+```
+
 ## Operations
 
 - Logs: `docker compose -f docker-compose.hub.yml logs -f`
@@ -52,7 +105,7 @@ docker compose -f docker-compose.hub.yml logs -f
 
 ## Heartbeat period (already deployed VPS)
 
-Heartbeat is configured in **`.env`** next to `docker-compose.hub.yml` on the VPS (often `/opt/email2telegram`). Compose loads it as `env_file` — the running process only sees changes after you **recreate** the container (`up -d --force-recreate`).
+Heartbeat, **`TZ`** (e.g. `Europe/Moscow` for “local” wall time), and related keys live in **VPS `.env`** — same file as all other runtime variables (see [Where configuration lives on the VPS](#where-configuration-lives-on-the-vps)). Apply changes with [How to apply settings](#how-to-apply-settings-after-you-change-them) (typically `sync-env` + `pull-up` from the PC).
 
 ### Variables
 
@@ -60,31 +113,7 @@ See [env-reference.md](env-reference.md) for full detail. Typical keys:
 
 - `HEARTBEAT_INTERVAL_SECONDS` — once per day: `86400`; disable: `0`.
 - `HEARTBEAT_HOUR` (0–23) and `HEARTBEAT_MINUTE` (0–59) — local wall time for the daily tick when the interval is ≥ 86400 seconds.
-- `TZ` — process timezone (e.g. `Europe/Moscow`); affects when “local” heartbeat fires.
-
-### Option A: from your PC (no manual SSH edit on VPS)
-
-1. Edit **local** `.env` in the repo with the desired `HEARTBEAT_*` (and `TZ` if needed).
-2. From repo root:
-
-```bash
-./scripts/host_to_vps.sh sync-env && ./scripts/host_to_vps.sh pull-up
-```
-
-`sync-env` pushes a filtered copy of `.env` to the VPS; `pull-up` runs `docker compose pull` and `up -d --force-recreate`.
-
-To also publish a new image and run the full pipeline: `./scripts/release.sh`.
-
-### Option B: on the VPS over SSH
-
-```bash
-cd /opt/email2telegram   # or your deploy directory
-nano .env                # set HEARTBEAT_* and TZ as needed
-docker compose -f docker-compose.hub.yml up -d --force-recreate
-docker compose -f docker-compose.hub.yml logs --tail=30
-```
-
-`pull` is optional if only `.env` changed (no new image tag).
+- `TZ` — process timezone (e.g. `Europe/Moscow`); used by the app and by Compose for the container.
 
 ### Image version
 
