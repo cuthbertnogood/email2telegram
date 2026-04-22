@@ -8,7 +8,7 @@ Script:
 
 What it does:
 
-- Optionally bumps `VERSION` MINOR.
+- Optionally bumps `VERSION` PATCH (third segment).
 - Builds `linux/amd64` and `linux/arm64` image via buildx.
 - Pushes tags:
   - `${DOCKER_USER}/email2telegram:${TAG:-latest}`

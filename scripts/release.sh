@@ -17,7 +17,7 @@ If the git working tree is dirty, all changes are staged (git add -A) and commit
 before the pipeline runs, unless --allow-dirty is set.
 
 Options:
-  --no-bump         Do not bump VERSION in host_to_docker_hub.sh (sets NO_BUMP=1)
+  --no-bump         Do not bump VERSION (PATCH) in host_to_docker_hub.sh (sets NO_BUMP=1)
   --skip-security   Skip security scan script before release checks
   --skip-tests      Skip python3 -m pytest -q
   --allow-dirty     Allow dirty git working tree (skip auto-commit)

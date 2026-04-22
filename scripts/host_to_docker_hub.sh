@@ -2,7 +2,7 @@
 # Build multi-arch image and push to Docker Hub (buildx --push).
 #
 # Steps (default):
-#   1) bump MINOR in VERSION (skip with NO_BUMP=1 or --no-bump)
+#   1) bump PATCH in VERSION (skip with NO_BUMP=1 or --no-bump)
 #   2) docker buildx build linux/amd64 + linux/arm64
 #   3) push tags to Docker Hub (requires docker login first)
 #
@@ -31,10 +31,10 @@ fi
 
 usage() {
   cat <<'EOF'
-host_to_docker_hub.sh — Docker Hub: bump MINOR (optional), build, push.
+host_to_docker_hub.sh — Docker Hub: bump PATCH (optional), build, push.
 
 What it does:
-  1. By default: increment MINOR in VERSION (in bash).
+  1. By default: increment PATCH in VERSION (in bash).
   2. buildx build for linux/amd64 and linux/arm64.
   3. Push to Docker Hub (same as build; no separate docker push).
 
@@ -58,7 +58,7 @@ Tags pushed: YOUR_HUB_USER/email2telegram:TAG and :GIT_SHORT_SHA (or :local).
 EOF
 }
 
-bump_docker_minor() {
+bump_docker_patch() {
   local raw major minor patch
   raw="$(tr -d '[:space:]' < "$ROOT/VERSION")"
   if [[ ! "$raw" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
@@ -68,9 +68,9 @@ bump_docker_minor() {
   major="${BASH_REMATCH[1]}"
   minor="${BASH_REMATCH[2]}"
   patch="${BASH_REMATCH[3]}"
-  minor=$((minor + 1))
+  patch=$((patch + 1))
   printf '%s.%s.%s\n' "$major" "$minor" "$patch" > "$ROOT/VERSION"
-  echo "MINOR bumped for Docker Hub build → ${major}.${minor}.${patch}"
+  echo "PATCH bumped for Docker Hub build → ${major}.${minor}.${patch}"
 }
 
 NO_BUMP="${NO_BUMP:-}"
@@ -106,7 +106,7 @@ image="${user}/email2telegram:${tag}"
 sha="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo local)"
 
 if [[ -z "$NO_BUMP" || "$NO_BUMP" == "0" ]]; then
-  bump_docker_minor
+  bump_docker_patch
 fi
 ver="$(tr -d '[:space:]' < "$ROOT/VERSION")"
 

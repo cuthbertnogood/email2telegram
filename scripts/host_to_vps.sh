@@ -175,7 +175,7 @@ Docker Hub (do in browser):
 3. PAT: https://hub.docker.com/settings/security → New access token.
 4. On your PC: docker login -u YOUR_DOCKERHUB_USER  (password = PAT)
 
-Build and push (bump MINOR by default):
+Build and push (bump PATCH on `VERSION` by default):
 
   ./scripts/host_to_docker_hub.sh
 

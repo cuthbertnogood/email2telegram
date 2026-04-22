@@ -73,7 +73,7 @@ Full template: see `reference.md`.
 ## Release discipline for this repo
 
 - If you changed `src/**` or `requirements.txt`, run `python3 scripts/bump_code_patch.py`.
-- For Docker Hub publish use `./scripts/host_to_docker_hub.sh` (MINOR bump by default).
+- For Docker Hub publish use `./scripts/host_to_docker_hub.sh` (PATCH bump on `VERSION` by default).
 - Keep human-readable notes in `CHANGELOG.md`.
 
 ## Anti-patterns to avoid

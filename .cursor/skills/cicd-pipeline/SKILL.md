@@ -33,7 +33,7 @@ Apply this skill when task mentions one of:
 
 ## Supported release modes
 
-- Default: `./scripts/release.sh` (tests + MINOR bump + Docker push + VPS deploy + VPS `.env` sync + GitHub push).
+- Default: `./scripts/release.sh` (tests + PATCH bump on `VERSION` + Docker push + VPS deploy + VPS `.env` sync + GitHub push).
 - No bump: `./scripts/release.sh --no-bump`.
 - Hotfix skip tests: `./scripts/release.sh --skip-tests`.
 - Skip VPS `.env` push (manual secret management): `./scripts/release.sh --skip-env-sync` or `VPS_SYNC_ENV=0` in `.env`.
@@ -48,7 +48,7 @@ When `TELEGRAM_BOT_TOKEN`, `IMAP_PASS`, or similar secrets need rotation: edit l
 ## Required files in this repo
 
 - `scripts/release.sh` - one-shot release wrapper.
-- `scripts/host_to_docker_hub.sh` - buildx + Docker Hub push + MINOR bump policy.
+- `scripts/host_to_docker_hub.sh` - buildx + Docker Hub push + PATCH bump policy.
 - `scripts/host_to_vps.sh` - sync/pull-up/enable-timer commands.
 - `scripts/host_to_github.sh` - stage/commit/push current branch to GitHub.
 - `deploy/vps-update-hub.sh` - VPS-side pull + recreate script.

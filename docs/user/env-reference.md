@@ -27,7 +27,7 @@ Deploy scripts (`release.sh`, `host_to_vps.sh`, `host_to_docker_hub.sh`) load `.
 
 - `DOCKER_USER`
 - `TAG` (default `latest`)
-- `NO_BUMP=1` (skip MINOR bump in Hub publish script)
+- `NO_BUMP=1` (skip PATCH bump in Hub publish script)
 - `VPS_USER`, `VPS_HOST`
 - `VPS_SSH_PORT`, `VPS_REMOTE_DIR`, `VPS_SSH_OPTS`, `VPS_SSH_VERBOSE`, `VPS_PULL_UP_RETRIES` (default `3`; `host_to_vps.sh` pull-up retries), `VPS_POST_SYNC_SLEEP` (`release.sh` only: pause seconds after sync before pull-up)
 - `VPS_SYNC_ENV` (default `1`): set to `0` to disable the `sync-env` step in `release.sh` if you manage VPS `.env` manually

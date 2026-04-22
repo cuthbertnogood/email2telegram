@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `scripts/host_to_docker_hub.sh`: default `VERSION` bump is **PATCH** (`MAJOR.MINOR.PATCH` → same `MAJOR.MINOR`, `PATCH+1`), not MINOR. Use `NO_BUMP=1` / `--no-bump` when `VERSION` was edited manually; bump `MINOR`/`MAJOR` by editing `VERSION` then building with `NO_BUMP=1`.
+
 ## [0.16.4] - 2026-04-20
 
 ### Added
