@@ -31,8 +31,8 @@ def _imap_auth_hint(host: str) -> str:
     h = host.lower()
     lines = [
         "Common fixes (Yandex Mail):",
-        "- Use the full address in IMAP_USER (e.g. you@yandex.ru, you@ya.ru, or your Yandex 360 domain).",
-        "- In Yandex ID → Security, create a password for an external app and put it in IMAP_PASS (not your usual login if 2FA is on).",
+        "- Use the full address in E2T_IMAP_USER (e.g. you@yandex.ru, you@ya.ru, or your Yandex 360 domain).",
+        "- In Yandex ID → Security, create a password for an external app and put it in E2T_IMAP_PASS (not your usual login if 2FA is on).",
         "- Try imap.yandex.com first; if login still fails, try imap.yandex.ru.",
         "- Regenerate the app password and paste again (no spaces; no trailing spaces in .env).",
     ]
@@ -50,11 +50,11 @@ def _imap_auth_hint(host: str) -> str:
 
 
 def _connect() -> tuple[imaplib.IMAP4_SSL, str]:
-    host = _required_env("IMAP_HOST")
-    port = int(os.getenv("IMAP_PORT", "993"))
-    user = _required_env("IMAP_USER")
-    password = _required_env("IMAP_PASS")
-    mailbox = os.getenv("IMAP_MAILBOX", "INBOX")
+    host = _required_env("E2T_IMAP_HOST")
+    port = int(os.getenv("E2T_IMAP_PORT", "993"))
+    user = _required_env("E2T_IMAP_USER")
+    password = _required_env("E2T_IMAP_PASS")
+    mailbox = os.getenv("E2T_IMAP_MAILBOX", "INBOX")
 
     client = imaplib.IMAP4_SSL(host, port)
     try:

@@ -5,7 +5,7 @@ def parse_allowed_chat_ids(raw: str) -> frozenset[int]:
     """Comma- or semicolon-separated Telegram chat IDs (private user id or group id)."""
     s = raw.strip()
     if not s:
-        raise RuntimeError("TELEGRAM_ALLOWED_CHAT_IDS is empty")
+        raise RuntimeError("E2T_TELEGRAM_ALLOWED_CHAT_IDS is empty")
     out: set[int] = set()
     for part in s.replace(";", ",").split(","):
         p = part.strip()
@@ -13,5 +13,5 @@ def parse_allowed_chat_ids(raw: str) -> frozenset[int]:
             continue
         out.add(int(p))
     if not out:
-        raise RuntimeError("TELEGRAM_ALLOWED_CHAT_IDS has no IDs")
+        raise RuntimeError("E2T_TELEGRAM_ALLOWED_CHAT_IDS has no IDs")
     return frozenset(out)

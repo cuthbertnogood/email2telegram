@@ -12,8 +12,8 @@ services:
     env_file:
       - .env
     environment:
-      STATE_FILE: /data/.state.json
-      TZ: ${TZ:-UTC}
+      E2T_STATE_FILE: /data/.state.json
+      TZ: ${E2T_TZ:-UTC}
     volumes:
       - email2telegram_data:/data
     logging:

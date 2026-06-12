@@ -24,7 +24,7 @@ async def send_formatted_text(
     """Send full text, splitting into several Telegram messages if needed."""
     cid = int(chat_id)
     if allowed_chat_ids is not None and cid not in allowed_chat_ids:
-        raise RuntimeError(f"Refusing to send: chat_id {cid} not in TELEGRAM_ALLOWED_CHAT_IDS")
+        raise RuntimeError(f"Refusing to send: chat_id {cid} not in E2T_TELEGRAM_ALLOWED_CHAT_IDS")
     banner = telegram_version_banner(service_version)
     for chunk in split_for_telegram(text, leading_banner=banner):
         for attempt in range(1, _SEND_ATTEMPTS + 1):

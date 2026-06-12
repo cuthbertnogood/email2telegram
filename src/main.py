@@ -12,7 +12,12 @@ from telegram.ext import Application, CommandHandler, ContextTypes, filters
 
 from allowlist import parse_allowed_chat_ids
 from imap_client import ImapClient
-from pipeline import load_export_dir_from_env, run_delivery_cycle
+from pipeline import (
+    load_export_dir_from_env,
+    load_imap_unseen_only,
+    load_max_messages_per_poll,
+    run_delivery_cycle,
+)
 from state import StateStore
 from telegram_client import send_formatted_text
 from version import get_version
@@ -26,7 +31,7 @@ def _required_env(name: str) -> str:
 
 
 def _state_path() -> str:
-    return os.getenv("STATE_FILE", ".state.json")
+    return os.getenv("E2T_STATE_FILE", ".state.json")
 
 
 async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -40,6 +45,8 @@ async def _poll_imap(context: ContextTypes.DEFAULT_TYPE) -> None:
             export_dir=bd["export_dir"],
             service_version=bd["service_version"],
             allowed_chat_ids=bd["allowed_chat_ids"],
+            max_messages_per_poll=bd["max_messages_per_poll"],
+            imap_unseen_only=bd["imap_unseen_only"],
         )
     except Exception:
         logging.exception("IMAP delivery cycle failed")
@@ -138,38 +145,40 @@ def main() -> None:
     load_dotenv()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    imap_host = _required_env("IMAP_HOST")
-    imap_port = int(os.getenv("IMAP_PORT", "993"))
-    imap_user = _required_env("IMAP_USER")
-    imap_pass = _required_env("IMAP_PASS")
-    imap_mailbox = os.getenv("IMAP_MAILBOX", "INBOX")
-    poll_interval = float(os.getenv("POLL_INTERVAL_SECONDS", "45"))
+    imap_host = _required_env("E2T_IMAP_HOST")
+    imap_port = int(os.getenv("E2T_IMAP_PORT", "993"))
+    imap_user = _required_env("E2T_IMAP_USER")
+    imap_pass = _required_env("E2T_IMAP_PASS")
+    imap_mailbox = os.getenv("E2T_IMAP_MAILBOX", "INBOX")
+    poll_interval = float(os.getenv("E2T_POLL_INTERVAL_SECONDS", "45"))
 
-    heartbeat_interval = float(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "86400"))
-    heartbeat_hour_raw = os.getenv("HEARTBEAT_HOUR", "9")
-    heartbeat_minute_raw = os.getenv("HEARTBEAT_MINUTE", "0")
+    heartbeat_interval = float(os.getenv("E2T_HEARTBEAT_INTERVAL_SECONDS", "86400"))
+    heartbeat_hour_raw = os.getenv("E2T_HEARTBEAT_HOUR", "9")
+    heartbeat_minute_raw = os.getenv("E2T_HEARTBEAT_MINUTE", "0")
     try:
         heartbeat_hour = int(heartbeat_hour_raw, 10)
     except ValueError as exc:
-        raise RuntimeError("HEARTBEAT_HOUR must be an integer 0-23") from exc
+        raise RuntimeError("E2T_HEARTBEAT_HOUR must be an integer 0-23") from exc
     if not 0 <= heartbeat_hour <= 23:
-        raise RuntimeError("HEARTBEAT_HOUR must be between 0 and 23 inclusive")
+        raise RuntimeError("E2T_HEARTBEAT_HOUR must be between 0 and 23 inclusive")
     try:
         heartbeat_minute = int(heartbeat_minute_raw, 10)
     except ValueError as exc:
-        raise RuntimeError("HEARTBEAT_MINUTE must be an integer 0-59") from exc
+        raise RuntimeError("E2T_HEARTBEAT_MINUTE must be an integer 0-59") from exc
     if not 0 <= heartbeat_minute <= 59:
-        raise RuntimeError("HEARTBEAT_MINUTE must be between 0 and 59 inclusive")
+        raise RuntimeError("E2T_HEARTBEAT_MINUTE must be between 0 and 59 inclusive")
 
-    bot_token = _required_env("TELEGRAM_BOT_TOKEN")
-    chat_id = _required_env("TELEGRAM_CHAT_ID")
-    allowed = parse_allowed_chat_ids(_required_env("TELEGRAM_ALLOWED_CHAT_IDS"))
+    bot_token = _required_env("E2T_TELEGRAM_BOT_TOKEN")
+    chat_id = _required_env("E2T_TELEGRAM_CHAT_ID")
+    allowed = parse_allowed_chat_ids(_required_env("E2T_TELEGRAM_ALLOWED_CHAT_IDS"))
 
     chat_id_int = int(chat_id)
     if chat_id_int not in allowed:
-        raise RuntimeError("TELEGRAM_CHAT_ID must be included in TELEGRAM_ALLOWED_CHAT_IDS")
+        raise RuntimeError("E2T_TELEGRAM_CHAT_ID must be included in E2T_TELEGRAM_ALLOWED_CHAT_IDS")
 
     export_dir = load_export_dir_from_env()
+    max_messages_per_poll = load_max_messages_per_poll()
+    imap_unseen_only = load_imap_unseen_only()
     state_path = _state_path()
     startup_iso = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     hostname = socket.gethostname()
@@ -187,7 +196,14 @@ def main() -> None:
     state = StateStore(path=state_path)
     service_version = get_version()
 
-    application = Application.builder().token(bot_token).post_init(_notify_startup).build()
+    builder = Application.builder().token(bot_token)
+    api_base = os.getenv("E2T_TELEGRAM_API_BASE", "").strip().rstrip("/")
+    if api_base:
+        # Relay (шаг-14): …/telegram → …/telegram/bot (как TELEGRAM_INFRA_API_BASE + /bot{token}/…)
+        if not api_base.endswith("/bot"):
+            api_base = f"{api_base}/bot"
+        builder = builder.base_url(api_base)
+    application = builder.post_init(_notify_startup).build()
 
     application.bot_data.update(
         {
@@ -204,6 +220,8 @@ def main() -> None:
             "python_version": python_version,
             "app_version": app_version,
             "export_dir_text": export_dir_text,
+            "max_messages_per_poll": max_messages_per_poll,
+            "imap_unseen_only": imap_unseen_only,
         }
     )
 
@@ -220,13 +238,13 @@ def main() -> None:
         hi = heartbeat_interval
         hi_i = int(hi)
         if hi_i != hi:
-            raise RuntimeError("HEARTBEAT_INTERVAL_SECONDS must be a whole number of seconds")
+            raise RuntimeError("E2T_HEARTBEAT_INTERVAL_SECONDS must be a whole number of seconds")
         if hi_i >= 86400:
             if hi_i % 86400 != 0:
                 raise RuntimeError(
-                    "HEARTBEAT_INTERVAL_SECONDS >= 86400 must be a multiple of 86400 (whole days)"
+                    "E2T_HEARTBEAT_INTERVAL_SECONDS >= 86400 must be a multiple of 86400 (whole days)"
                 )
-            # Once (or every N days): next local wall time HEARTBEAT_HOUR:HEARTBEAT_MINUTE, then fixed interval.
+            # Once (or every N days): next local wall time E2T_HEARTBEAT_HOUR:E2T_HEARTBEAT_MINUTE, then fixed interval.
             target = now_local.replace(
                 hour=heartbeat_hour, minute=heartbeat_minute, second=0, microsecond=0
             )
@@ -235,8 +253,8 @@ def main() -> None:
             heartbeat_first = (target - now_local).total_seconds()
             next_mark = target
         else:
-            # Wall-clock grid within the hour: ticks every HEARTBEAT_INTERVAL_SECONDS,
-            # anchored so one tick falls on minute HEARTBEAT_MINUTE (e.g. 900s + minute 45 -> :00/:15/:30/:45).
+            # Wall-clock grid within the hour: ticks every E2T_HEARTBEAT_INTERVAL_SECONDS,
+            # anchored so one tick falls on minute E2T_HEARTBEAT_MINUTE (e.g. 900s + minute 45 -> :00/:15/:30/:45).
             # After restart, first run is the next grid point, not "same minute + 1 hour".
             anchor = (heartbeat_minute * 60) % int(hi)
             seconds_in_hour = (
@@ -273,12 +291,14 @@ def main() -> None:
                 next_mark.isoformat(timespec="seconds"),
             )
     else:
-        logging.info("heartbeat disabled (HEARTBEAT_INTERVAL_SECONDS <= 0)")
+        logging.info("heartbeat disabled (E2T_HEARTBEAT_INTERVAL_SECONDS <= 0)")
 
     logging.info(
-        "email2telegram v%s started | poll=%ss | allowlist=%s | export=%s | state=%s",
+        "email2telegram v%s started | poll=%ss max_per_poll=%s unseen_only=%s | allowlist=%s | export=%s | state=%s",
         service_version,
         poll_interval,
+        max_messages_per_poll,
+        imap_unseen_only,
         sorted(allowed),
         export_dir.resolve() if export_dir else None,
         state_path,

@@ -20,10 +20,10 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 ENV PYTHONUNBUFFERED=1 \
-    STATE_FILE=/data/.state.json
+    E2T_STATE_FILE=/data/.state.json
 
 HEALTHCHECK --interval=60s --timeout=5s --start-period=20s --retries=3 \
-  CMD python -c "import json, os, pathlib; p=pathlib.Path(os.getenv('STATE_FILE','/data/.state.json')); p.exists() and (json.loads(p.read_text(encoding='utf-8')) if p.stat().st_size else {})"
+  CMD python -c "import json, os, pathlib; p=pathlib.Path(os.getenv('E2T_STATE_FILE','/data/.state.json')); p.exists() and (json.loads(p.read_text(encoding='utf-8')) if p.stat().st_size else {})"
 
 VOLUME ["/data"]
 
