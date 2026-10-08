@@ -8,8 +8,8 @@ name: Docker Hub
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ["v*"]
 
 env:
   IMAGE_NAME: email2telegram

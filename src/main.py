@@ -197,12 +197,19 @@ def main() -> None:
     service_version = get_version()
 
     builder = Application.builder().token(bot_token)
-    api_base = os.getenv("E2T_TELEGRAM_API_BASE", "").strip().rstrip("/")
-    if api_base:
-        # Relay (шаг-14): …/telegram → …/telegram/bot (как TELEGRAM_INFRA_API_BASE + /bot{token}/…)
-        if not api_base.endswith("/bot"):
-            api_base = f"{api_base}/bot"
+    relay_raw = os.getenv("E2T_TELEGRAM_API_BASE", "").strip()
+    if relay_raw:
+        from telegram_relay import (
+            RelayFailoverHTTPXRequest,
+            parse_relay_roots,
+            resolve_bot_api_base,
+        )
+
+        api_base = resolve_bot_api_base(relay_raw)
         builder = builder.base_url(api_base)
+        if len(parse_relay_roots(relay_raw)) > 1:
+            req = RelayFailoverHTTPXRequest(relay_raw)
+            builder = builder.request(req).get_updates_request(req)
     application = builder.post_init(_notify_startup).build()
 
     application.bot_data.update(
